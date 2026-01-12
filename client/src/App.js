@@ -307,6 +307,9 @@ function IntakePage() {
   const formatValue = (value) => (value ? value : 'Not provided');
   const formatArray = (value) =>
     Array.isArray(value) && value.length > 0 ? value.join(', ') : 'Not provided';
+  const visibleLeaseSections = leaseSections.filter(
+    (section) => section.topic === 'Security deposit'
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -407,9 +410,9 @@ function IntakePage() {
                     {leaseMessage}
                   </p>
                 ) : null}
-                {leaseSections.length > 0 ? (
+                {visibleLeaseSections.length > 0 ? (
                   <div className="space-y-3">
-                    {leaseSections.map((section) => (
+                    {visibleLeaseSections.map((section) => (
                       <div key={section.topic} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className="text-sm font-semibold text-slate-900">{section.topic}</p>
                         <p className="mt-2 text-sm text-slate-700">{section.summary}</p>
