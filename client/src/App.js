@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { DISCLAIMERS } from './disclaimers';
+import heroImage from './assets/hero-deposit.png';
 
 const formatValue = (value) => (value ? value : 'Not provided');
 const formatArray = (value) =>
@@ -11,100 +12,131 @@ function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50 text-slate-900">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-blue-100/70 blur-3xl" />
-        <div className="absolute top-48 left-8 h-64 w-64 rounded-full bg-amber-100/70 blur-3xl" />
-      </div>
-
-      <header className="relative">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex items-center justify-between">
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">DepositDefender</p>
-            <h1 className="font-editorial text-2xl sm:text-3xl text-slate-900">
-              Texas Security Deposit Support
-            </h1>
+            <p className="brand">DepositDefender</p>
+            <p className="text-sm text-slate-500">Texas Security Deposit Support</p>
           </div>
-          <nav className="flex items-center gap-6 text-sm text-slate-500">
-            <a className="hover:text-slate-700" href="#blog">Blog</a>
-            <a className="hover:text-slate-700" href="#faq">FAQ</a>
-          </nav>
+          <div className="accent-chip">Consumer-first document prep</div>
         </div>
       </header>
 
-      <main className="relative max-w-6xl mx-auto px-6 pb-24">
-        <section className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] items-start">
-          <div className="space-y-8">
-            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">
-              Texas-only document preparation
-            </p>
-            <h2 className="font-editorial text-4xl sm:text-5xl leading-tight text-slate-900">
-              A calm, structured way to tell your deposit story.
-            </h2>
-            <p className="text-lg text-slate-600 leading-relaxed">
-              We help Texas renters organize facts, timelines, and records into a
-              clear, professional summary. The goal is clarity and readiness,
-              not pressure or legal strategy.
-            </p>
-            <button
-              onClick={() => navigate('/intake')}
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-200 hover:bg-slate-800"
-            >
-              Start Your Dispute
-            </button>
-          </div>
-
-          <div className="space-y-8 text-sm text-slate-600">
-            <div className="border-l border-slate-200 pl-6">
-              <p className="font-semibold text-slate-900">What this service does</p>
-              <p className="mt-3 leading-relaxed">
-                Organizes the details you provide and formats them into
-                an informational packet designed for clarity and record keeping.
+      <main className="container pb-20">
+        <section className="hero">
+          <div className="hero-image" style={{ backgroundImage: `url(${heroImage})` }}>
+            <div className="hero-content">
+              <p className="accent-chip">Texas renters only</p>
+              <h2 className="hero-title">
+                Worried you’re getting screwed on your security deposit?
+              </h2>
+              <p className="hero-subtitle">
+                We organize the facts, timelines, and documents into a clear,
+                professional summary you can use right away.
               </p>
-            </div>
-            <div className="border-l border-slate-200 pl-6">
-              <p className="font-semibold text-slate-900">What this service does not do</p>
-              <p className="mt-3 leading-relaxed">
-                We do not offer legal advice, legal opinions, or legal representation.
-                We do not contact landlords or recommend legal actions.
-              </p>
-            </div>
-            <div className="border-l border-slate-200 pl-6">
-              <p className="font-semibold text-slate-900">Built for Texas</p>
-              <p className="mt-3 leading-relaxed">
-                This service is limited to Texas residential leases only.
-              </p>
+              <button
+                onClick={() => navigate('/intake')}
+                className="cta-primary"
+              >
+                Start Your Defense
+              </button>
+              <div className="secondary-actions">
+                <a className="link-pill" href="#blog">Blog</a>
+                <a className="link-pill" href="#faq">FAQ</a>
+                <a className="link-pill" href="#how-it-works">How It Works</a>
+              </div>
             </div>
           </div>
-        </section>
 
-        <section className="mt-20 space-y-6">
-          <h3 className="font-editorial text-2xl text-slate-900">A thoughtful, simple flow</h3>
-          <div className="grid gap-6 md:grid-cols-3 text-sm text-slate-600">
-            <div>
-              <p className="font-semibold text-slate-900">1. Share the facts</p>
-              <p className="mt-2 leading-relaxed">
-                You enter lease dates, deposit details, and communications.
+          <div className="card-grid">
+            <div className="card">
+              <h3 className="text-lg font-semibold text-slate-900">Clarity without the chaos</h3>
+              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                We turn scattered lease notes into an easy-to-read record
+                that keeps the focus on the facts.
               </p>
             </div>
-            <div>
-              <p className="font-semibold text-slate-900">2. Review the summary</p>
-              <p className="mt-2 leading-relaxed">
-                We organize the information in a clear, neutral format.
+            <div className="card">
+              <h3 className="text-lg font-semibold text-slate-900">Built for Texas renters</h3>
+              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                Tailored to Texas residential leases with practical prompts
+                that keep you on track.
               </p>
             </div>
-            <div>
-              <p className="font-semibold text-slate-900">3. Download</p>
-              <p className="mt-2 leading-relaxed">
-                Receive an informational PDF for your records.
+            <div className="card">
+              <h3 className="text-lg font-semibold text-slate-900">No legal advice, just structure</h3>
+              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                We keep the language plain and neutral so you can
+                decide what to do next.
               </p>
             </div>
           </div>
         </section>
 
-        <section className="mt-16 rounded-2xl border border-slate-200 bg-white/80 p-6">
+        <section id="how-it-works" className="space-y-6 mb-16">
+          <h3 className="section-title">How it works</h3>
+          <div className="card-grid md:grid-cols-3">
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">1. Share the facts</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Enter lease dates, deposit details, and what you received.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">2. Review the summary</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                We organize everything into a clean, neutral record.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">3. Download</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Get a PDF you can keep, share, or reference later.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="blog" className="space-y-6 mb-16">
+          <h3 className="section-title">Blog</h3>
+          <div className="card-grid md:grid-cols-2">
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">Know your deposit timeline</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Understand what to track and how to keep clean records.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">Document the basics first</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                A short checklist for deposits, photos, and communications.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" className="space-y-6 mb-16">
+          <h3 className="section-title">FAQ</h3>
+          <div className="card-grid md:grid-cols-2">
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">Is this legal advice?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                No. This is document preparation and informational support only.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm font-semibold text-slate-900">Can I edit the summary?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Yes, you can review and adjust before downloading.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="notice-card">
           <p className="text-sm font-semibold text-slate-900 mb-3">Important Notice</p>
-          <ul className="text-sm text-slate-600 space-y-1">
+          <ul className="text-sm text-slate-700 space-y-1">
             {DISCLAIMERS.map((line) => (
               <li key={line}>{line}</li>
             ))}
@@ -112,8 +144,8 @@ function Home() {
         </section>
       </main>
 
-      <footer className="relative border-t border-slate-200 bg-white/70">
-        <div className="max-w-6xl mx-auto px-6 py-10 text-sm text-slate-500">
+      <footer className="footer">
+        <div className="container text-sm text-slate-500">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <p className="font-semibold text-slate-900">DepositDefender</p>
@@ -312,23 +344,23 @@ function IntakePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">DepositDefender</h1>
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex items-center justify-between">
+          <h1 className="brand">DepositDefender</h1>
           <button
             onClick={() => navigate('/')}
-            className="text-gray-600 hover:text-gray-900"
+            className="btn-outline text-sm"
           >
             Back to Home
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Texas Intake</h2>
-          <p className="text-gray-600 mb-8">
+      <main className="container py-12">
+        <div className="form-card">
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Texas Intake</h2>
+          <p className="text-slate-600 mb-8">
             This intake is for Texas residential leases only. The information you enter is used to
             prepare a non-legal, informational document.
           </p>
@@ -341,16 +373,19 @@ function IntakePage() {
                 onClick={() => setIntakeMode('manual')}
                 className={
                   intakeMode === 'manual'
-                    ? 'rounded-lg border border-slate-900 bg-slate-900 px-4 py-4 text-left text-white'
-                    : 'rounded-lg border border-slate-200 bg-white px-4 py-4 text-left text-slate-700'
+                    ? 'toggle-card toggle-card-active'
+                    : 'toggle-card'
                 }
               >
                 <p className="text-sm font-semibold">Enter information manually</p>
-                <p className="mt-2 text-sm text-slate-200/90">
+                <p className={intakeMode === 'manual'
+                  ? 'mt-2 text-sm text-white/80'
+                  : 'mt-2 text-sm text-slate-600'}
+                >
                   Type your lease and deposit details by hand.
                 </p>
                 {intakeMode === 'manual' ? (
-                  <p className="mt-2 text-xs uppercase tracking-wide">Selected</p>
+                  <p className="mt-2 text-xs uppercase tracking-wide text-white/70">Selected</p>
                 ) : null}
               </button>
               <button
@@ -358,16 +393,19 @@ function IntakePage() {
                 onClick={() => setIntakeMode('upload')}
                 className={
                   intakeMode === 'upload'
-                    ? 'rounded-lg border border-slate-900 bg-slate-900 px-4 py-4 text-left text-white'
-                    : 'rounded-lg border border-slate-200 bg-white px-4 py-4 text-left text-slate-700'
+                    ? 'toggle-card toggle-card-active'
+                    : 'toggle-card'
                 }
               >
                 <p className="text-sm font-semibold">Upload lease to auto-fill information</p>
-                <p className="mt-2 text-sm text-slate-200/90">
+                <p className={intakeMode === 'upload'
+                  ? 'mt-2 text-sm text-white/80'
+                  : 'mt-2 text-sm text-slate-600'}
+                >
                   We extract text and suggest values you can edit.
                 </p>
                 {intakeMode === 'upload' ? (
-                  <p className="mt-2 text-xs uppercase tracking-wide">Selected</p>
+                  <p className="mt-2 text-xs uppercase tracking-wide text-white/70">Selected</p>
                 ) : null}
               </button>
             </div>
@@ -391,7 +429,7 @@ function IntakePage() {
                   <button
                     type="button"
                     onClick={handleLeaseUpload}
-                    className="rounded-full bg-slate-900 px-5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                    className="btn-primary text-xs"
                   >
                     Upload lease
                   </button>
@@ -413,7 +451,7 @@ function IntakePage() {
                 {visibleLeaseSections.length > 0 ? (
                   <div className="space-y-3">
                     {visibleLeaseSections.map((section) => (
-                      <div key={section.topic} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div key={section.topic} className="card">
                         <p className="text-sm font-semibold text-slate-900">{section.topic}</p>
                         <p className="mt-2 text-sm text-slate-700">{section.summary}</p>
                         {section.excerpts && section.excerpts.length > 0 ? (
@@ -430,11 +468,11 @@ function IntakePage() {
                   </div>
                 ) : null}
                 {leasePreview ? (
-                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                  <div className="mt-4 card text-sm text-slate-700">
                     <button
                       type="button"
                       onClick={() => setShowLeasePreview((prev) => !prev)}
-                      className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                      className="btn-outline text-xs uppercase tracking-wide"
                     >
                       {showLeasePreview ? 'Hide extracted text preview' : 'Show extracted text preview'}
                     </button>
@@ -932,7 +970,7 @@ function IntakePage() {
                 <p>Intake received. Case ID: {caseId}</p>
                 <a
                   href={`/download/${caseId}`}
-                  className="mt-2 inline-block text-blue-700 underline"
+                  className="mt-3 inline-flex btn-outline text-sm"
                 >
                   Open download page
                 </a>
@@ -943,14 +981,14 @@ function IntakePage() {
             <button
               type="submit"
               disabled={isSubmitting || Boolean(caseId)}
-              className="w-full rounded-lg bg-blue-600 px-6 py-3 text-lg font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
+              className="btn-accent w-full text-lg disabled:opacity-60"
             >
               {isSubmitting ? 'Submitting...' : caseId ? 'Intake Submitted' : 'Submit Intake'}
             </button>
           </form>
         </div>
 
-        <div className="mt-10 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
+        <div className="mt-10 notice-card text-sm">
           <ul className="space-y-1">
             {DISCLAIMERS.map((line) => (
               <li key={line}>{line}</li>
@@ -999,17 +1037,17 @@ function DownloadPage() {
   }, [apiBaseUrl, caseId]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">DepositDefender</h1>
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex items-center justify-between">
+          <h1 className="brand">DepositDefender</h1>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Download</h2>
-          <p className="text-gray-600 mb-6">Case ID: {caseId}</p>
+      <main className="container py-12">
+        <div className="form-card">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Download</h2>
+          <p className="text-slate-600 mb-6">Case ID: {caseId}</p>
 
           {status === 'loading' ? (
             <p className="text-gray-600">Checking your case...</p>
@@ -1026,7 +1064,7 @@ function DownloadPage() {
           {status === 'ready' ? (
             <div className="space-y-3">
               {caseData ? (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                <div className="card text-sm text-slate-700">
                   <h3 className="text-base font-semibold text-slate-900 mb-3">Review</h3>
                   <ul className="space-y-2">
                     <li>Tenant name: {formatValue(caseData.intake.tenant_information.full_name)}</li>
@@ -1112,7 +1150,7 @@ function DownloadPage() {
               <a
                 href={`${apiBaseUrl}/api/documents/${caseId}`}
                 onClick={() => setDownloaded(true)}
-                className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700"
+                className="btn-accent"
               >
                 Download informational PDF
               </a>
@@ -1125,7 +1163,7 @@ function DownloadPage() {
           ) : null}
         </div>
 
-        <div className="mt-8 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
+        <div className="mt-8 notice-card text-sm">
           <ul className="space-y-1">
             {DISCLAIMERS.map((line) => (
               <li key={line}>{line}</li>
@@ -1141,7 +1179,7 @@ function DownloadPage() {
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/intake" element={<IntakePage />} />
