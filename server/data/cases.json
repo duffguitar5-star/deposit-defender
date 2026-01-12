@@ -1,0 +1,50 @@
+{
+  "ed98027d-3784-4a42-8004-45844b755d20": {
+    "id": "ed98027d-3784-4a42-8004-45844b755d20",
+    "intake": {
+      "jurisdiction": "TX",
+      "tenant_information": {
+        "full_name": "Tom Platz",
+        "email": "duffguitar5@gmail.com",
+        "phone": ""
+      },
+      "property_information": {
+        "property_address": "1753 Bonaventure",
+        "city": "Burbank",
+        "zip_code": "75078",
+        "county": "co"
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2025-01-01",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-01-01",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "1000",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "no",
+        "date_itemized_list_received": "",
+        "communication_methods_used": [
+          "email"
+        ]
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      }
+    },
+    "createdAt": "2026-01-11T03:17:15.349Z"
+  }
+}

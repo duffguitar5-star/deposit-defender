@@ -1,0 +1,19 @@
+# Node dependencies
+node_modules/
+server/node_modules/
+
+# Builds
+dist/
+build/
+
+# Editor
+.vscode/
+
+# Logs / temp
+*.log
+.cache/
+tmp/
+
+# OS
+Thumbs.db
+.DS_Store

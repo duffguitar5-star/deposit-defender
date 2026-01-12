@@ -1,0 +1,47 @@
+{
+  "jurisdiction": "TX",
+  "tenant_information": {
+    "full_name": "",
+    "email": "",
+    "phone": ""
+  },
+  "property_information": {
+    "property_address": "",
+    "city": "",
+    "zip_code": "",
+    "county": ""
+  },
+  "lease_information": {
+    "lease_start_date": "",
+    "lease_end_date": "",
+    "lease_type": "written | oral | unknown"
+  },
+  "move_out_information": {
+    "move_out_date": "",
+    "forwarding_address_provided": "yes | no | unknown",
+    "forwarding_address_date": ""
+  },
+  "security_deposit_information": {
+    "deposit_amount": "",
+    "deposit_paid_date": "",
+    "deposit_returned": "yes | no | partial",
+    "amount_returned": ""
+  },
+  "post_move_out_communications": {
+    "itemized_deductions_received": "yes | no | unknown",
+    "date_itemized_list_received": "",
+    "communication_methods_used": [
+      "email",
+      "mail",
+      "text",
+      "other"
+    ]
+  },
+  "additional_notes": {
+    "tenant_notes": ""
+  },
+  "acknowledgements": {
+    "texas_only_confirmation": true,
+    "non_legal_service_acknowledged": true
+  }
+}
