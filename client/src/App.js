@@ -10,137 +10,84 @@ const formatArray = (value) =>
 // Home Page Component
 function Home() {
   const navigate = useNavigate();
+  const [showTerms, setShowTerms] = useState(false);
 
   return (
     <div className="app-shell">
       <header className="site-header">
-        <div className="container flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="brand">DepositDefender</p>
-            <p className="text-sm text-slate-500">Texas Security Deposit Support</p>
+        <div className="container">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
           </div>
-          <div className="accent-chip">Consumer-first document prep</div>
+          <nav className="flex gap-6 text-sm">
+            <a href="/blog" className="nav-link">Blog</a>
+            <a href="/faq" className="nav-link">FAQ</a>
+            <a href="/how-it-works" className="nav-link">How It Works</a>
+          </nav>
         </div>
       </header>
 
       <main className="container pb-20">
         <section className="hero">
-          <div className="hero-image" style={{ backgroundImage: `url(${heroImage})` }}>
-            <div className="hero-content">
-              <p className="accent-chip">Texas renters only</p>
-              <h2 className="hero-title">
-                Worried you’re getting screwed on your security deposit?
-              </h2>
-              <p className="hero-subtitle">
-                We organize the facts, timelines, and documents into a clear,
-                professional summary you can use right away.
-              </p>
-              <button
-                onClick={() => navigate('/intake')}
-                className="cta-primary"
-              >
-                Start Your Defense
-              </button>
-              <div className="secondary-actions">
-                <a className="link-pill" href="#blog">Blog</a>
-                <a className="link-pill" href="#faq">FAQ</a>
-                <a className="link-pill" href="#how-it-works">How It Works</a>
-              </div>
-            </div>
+          <div className="hero-content">
+            <p className="accent-chip">Texas renters only</p>
+            <h2 className="hero-title">
+              Worried you're getting screwed on your security deposit?
+            </h2>
+            <p className="hero-subtitle">
+              We organize the facts, timelines, and documents into a clear,
+              professional summary you can use right away.
+            </p>
+            <button
+              onClick={() => navigate('/intake')}
+              className="cta-primary"
+            >
+              Start Your Defense
+            </button>
           </div>
+          <div className="hero-image" style={{ backgroundImage: `url(${heroImage})` }}></div>
+        </section>
 
-          <div className="card-grid">
-            <div className="card">
-              <h3 className="text-lg font-semibold text-slate-900">Clarity without the chaos</h3>
-              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                We turn scattered lease notes into an easy-to-read record
-                that keeps the focus on the facts.
-              </p>
-            </div>
-            <div className="card">
-              <h3 className="text-lg font-semibold text-slate-900">Built for Texas renters</h3>
-              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                Tailored to Texas residential leases with practical prompts
-                that keep you on track.
-              </p>
-            </div>
-            <div className="card">
-              <h3 className="text-lg font-semibold text-slate-900">No legal advice, just structure</h3>
-              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                We keep the language plain and neutral so you can
-                decide what to do next.
-              </p>
-            </div>
+        <section className="card-grid mb-16">
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900">Clarity without the chaos</h3>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+              We turn scattered lease notes into an easy-to-read record
+              that keeps the focus on the facts.
+            </p>
+          </div>
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900">Built for Texas renters</h3>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+              Tailored to Texas residential leases with practical prompts
+              that keep you on track.
+            </p>
+          </div>
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900">Effective and Legal</h3>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+              We keep the language plain and neutral so you can
+              decide what to do next.
+            </p>
           </div>
         </section>
 
-        <section id="how-it-works" className="space-y-6 mb-16">
-          <h3 className="section-title">How it works</h3>
-          <div className="card-grid md:grid-cols-3">
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">1. Share the facts</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Enter lease dates, deposit details, and what you received.
-              </p>
+        <section className="text-center mb-16">
+          <button
+            onClick={() => setShowTerms(!showTerms)}
+            className="btn-outline text-sm"
+          >
+            Terms and Conditions
+          </button>
+          {showTerms && (
+            <div className="mt-6 notice-card text-left">
+              <ul className="text-sm text-slate-700 space-y-1">
+                {DISCLAIMERS.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
             </div>
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">2. Review the summary</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                We organize everything into a clean, neutral record.
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">3. Download</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Get a PDF you can keep, share, or reference later.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section id="blog" className="space-y-6 mb-16">
-          <h3 className="section-title">Blog</h3>
-          <div className="card-grid md:grid-cols-2">
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">Know your deposit timeline</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Understand what to track and how to keep clean records.
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">Document the basics first</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                A short checklist for deposits, photos, and communications.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section id="faq" className="space-y-6 mb-16">
-          <h3 className="section-title">FAQ</h3>
-          <div className="card-grid md:grid-cols-2">
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">Is this legal advice?</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                No. This is document preparation and informational support only.
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm font-semibold text-slate-900">Can I edit the summary?</p>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Yes, you can review and adjust before downloading.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="notice-card">
-          <p className="text-sm font-semibold text-slate-900 mb-3">Important Notice</p>
-          <ul className="text-sm text-slate-700 space-y-1">
-            {DISCLAIMERS.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          )}
         </section>
       </main>
 
@@ -178,12 +125,20 @@ function IntakePage() {
   const [leasePreview, setLeasePreview] = useState('');
   const [showLeasePreview, setShowLeasePreview] = useState(false);
   const [intakeMode, setIntakeMode] = useState('manual');
+  const [autoFilledFields, setAutoFilledFields] = useState(new Set());
   const [form, setForm] = useState({
     jurisdiction: 'TX',
     tenant_information: {
       full_name: '',
       email: '',
       phone: '',
+    },
+    landlord_information: {
+      landlord_name: '',
+      landlord_address: '',
+      landlord_city: '',
+      landlord_state: 'TX',
+      landlord_zip: '',
     },
     property_information: {
       property_address: '',
@@ -243,9 +198,18 @@ function IntakePage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setSubmitError('');
     setSubmitErrors([]);
+
+    // Validate dates before submission
+    const startDate = form.lease_information.lease_start_date;
+    const endDate = form.lease_information.lease_end_date;
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      setSubmitError('Lease start date must be before lease end date.');
+      return;
+    }
+
+    setIsSubmitting(true);
     setCaseId('');
 
     try {
@@ -301,6 +265,13 @@ function IntakePage() {
       return;
     }
 
+    const maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (leaseFile.size > maxFileSize) {
+      setLeaseStatus('error');
+      setLeaseMessage('File size exceeds 10MB. Please upload a smaller file or compress your PDF.');
+      return;
+    }
+
     setLeaseStatus('uploading');
     setLeaseMessage('');
     setLeaseSections([]);
@@ -330,6 +301,76 @@ function IntakePage() {
       setLeaseMessage(data.message || '');
       setLeaseSections(Array.isArray(data.sections) ? data.sections : []);
       setLeasePreview(data.preview || '');
+
+      // Auto-fill form fields from extracted data
+      if (data.extractedData && Object.keys(data.extractedData).length > 0) {
+        const extracted = data.extractedData;
+        const filledFields = new Set();
+
+        setForm((prev) => {
+          const updated = { ...prev };
+
+          if (extracted.tenant_name && !prev.tenant_information.full_name) {
+            updated.tenant_information = {
+              ...prev.tenant_information,
+              full_name: extracted.tenant_name,
+            };
+            filledFields.add('tenant_information.full_name');
+          }
+
+          if (extracted.property_address && !prev.property_information.property_address) {
+            updated.property_information = {
+              ...prev.property_information,
+              property_address: extracted.property_address,
+            };
+            filledFields.add('property_information.property_address');
+          }
+
+          if (extracted.city && !prev.property_information.city) {
+            updated.property_information = {
+              ...updated.property_information,
+              city: extracted.city,
+            };
+            filledFields.add('property_information.city');
+          }
+
+          if (extracted.zip_code && !prev.property_information.zip_code) {
+            updated.property_information = {
+              ...updated.property_information,
+              zip_code: extracted.zip_code,
+            };
+            filledFields.add('property_information.zip_code');
+          }
+
+          if (extracted.lease_start_date && !prev.lease_information.lease_start_date) {
+            updated.lease_information = {
+              ...prev.lease_information,
+              lease_start_date: extracted.lease_start_date,
+            };
+            filledFields.add('lease_information.lease_start_date');
+          }
+
+          if (extracted.lease_end_date && !prev.lease_information.lease_end_date) {
+            updated.lease_information = {
+              ...updated.lease_information,
+              lease_end_date: extracted.lease_end_date,
+            };
+            filledFields.add('lease_information.lease_end_date');
+          }
+
+          if (extracted.deposit_amount && !prev.security_deposit_information.deposit_amount) {
+            updated.security_deposit_information = {
+              ...prev.security_deposit_information,
+              deposit_amount: extracted.deposit_amount,
+            };
+            filledFields.add('security_deposit_information.deposit_amount');
+          }
+
+          return updated;
+        });
+
+        setAutoFilledFields(filledFields);
+      }
     } catch (error) {
       setLeaseStatus('error');
       setLeaseMessage('Unable to upload lease right now.');
@@ -366,92 +407,54 @@ function IntakePage() {
           </p>
 
           <section className="mb-10">
-            <h3 className="text-lg font-semibold text-gray-900">Choose how to begin</h3>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setIntakeMode('manual')}
-                className={
-                  intakeMode === 'manual'
-                    ? 'toggle-card toggle-card-active'
-                    : 'toggle-card'
-                }
-              >
-                <p className="text-sm font-semibold">Enter information manually</p>
-                <p className={intakeMode === 'manual'
-                  ? 'mt-2 text-sm text-white/80'
-                  : 'mt-2 text-sm text-slate-600'}
-                >
-                  Type your lease and deposit details by hand.
-                </p>
-                {intakeMode === 'manual' ? (
-                  <p className="mt-2 text-xs uppercase tracking-wide text-white/70">Selected</p>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIntakeMode('upload')}
-                className={
-                  intakeMode === 'upload'
-                    ? 'toggle-card toggle-card-active'
-                    : 'toggle-card'
-                }
-              >
-                <p className="text-sm font-semibold">Upload lease to auto-fill information</p>
-                <p className={intakeMode === 'upload'
-                  ? 'mt-2 text-sm text-white/80'
-                  : 'mt-2 text-sm text-slate-600'}
-                >
-                  We extract text and suggest values you can edit.
-                </p>
-                {intakeMode === 'upload' ? (
-                  <p className="mt-2 text-xs uppercase tracking-wide text-white/70">Selected</p>
-                ) : null}
-              </button>
-            </div>
-          </section>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">Choose how to begin</h3>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {intakeMode === 'upload' ? (
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-900">Lease upload (optional)</h3>
-                <p className="text-sm text-gray-600">
-                  Upload a PDF or image to receive suggested values. You can always switch back to
-                  manual entry.
+            {/* Upload Lease - Primary Option */}
+            <div className="mb-6">
+              <div className="card p-6">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4">Upload your lease</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  PDF or image. Maximum file size: 10MB.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
                     type="file"
                     accept=".pdf,image/*"
-                    onChange={(event) => setLeaseFile(event.target.files[0] || null)}
+                    onChange={(event) => {
+                      setLeaseFile(event.target.files[0] || null);
+                      if (event.target.files[0]) {
+                        setIntakeMode('upload');
+                      }
+                    }}
                     className="block w-full text-sm text-slate-600"
                   />
                   <button
                     type="button"
                     onClick={handleLeaseUpload}
-                    className="btn-primary text-xs"
+                    disabled={!leaseFile}
+                    className="cta-primary text-sm px-8"
                   >
                     Upload lease
                   </button>
                 </div>
                 {leaseStatus === 'uploading' ? (
-                  <p className="text-sm text-slate-600">Uploading...</p>
+                  <p className="text-sm text-slate-600 mt-3">Uploading...</p>
                 ) : null}
                 {leaseMessage ? (
                   <p
                     className={
                       leaseStatus === 'error'
-                        ? 'text-sm text-red-600'
-                        : 'text-sm text-slate-700'
+                        ? 'text-sm text-red-600 mt-3'
+                        : 'text-sm text-slate-700 mt-3'
                     }
                   >
                     {leaseMessage}
                   </p>
                 ) : null}
                 {visibleLeaseSections.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-4">
                     {visibleLeaseSections.map((section) => (
-                      <div key={section.topic} className="card">
+                      <div key={section.topic} className="bg-slate-50 rounded-lg p-4">
                         <p className="text-sm font-semibold text-slate-900">{section.topic}</p>
                         <p className="mt-2 text-sm text-slate-700">{section.summary}</p>
                         {section.excerpts && section.excerpts.length > 0 ? (
@@ -468,7 +471,7 @@ function IntakePage() {
                   </div>
                 ) : null}
                 {leasePreview ? (
-                  <div className="mt-4 card text-sm text-slate-700">
+                  <div className="mt-4">
                     <button
                       type="button"
                       onClick={() => setShowLeasePreview((prev) => !prev)}
@@ -477,18 +480,39 @@ function IntakePage() {
                       {showLeasePreview ? 'Hide extracted text preview' : 'Show extracted text preview'}
                     </button>
                     {showLeasePreview ? (
-                      <p className="mt-3 whitespace-pre-wrap text-xs text-slate-600">{leasePreview}</p>
+                      <p className="mt-3 whitespace-pre-wrap text-xs text-slate-600 bg-slate-50 p-3 rounded">{leasePreview}</p>
                     ) : null}
                   </div>
                 ) : null}
-              </section>
-            ) : null}
+              </div>
+            </div>
 
-            <section className="space-y-4">
-              <h3 className="text-xl font-semibold text-gray-900">Tenant Information</h3>
+            {/* Manual Entry - Secondary Option */}
+            <div className="text-center">
+              <p className="text-sm text-slate-500 mb-3">or</p>
+              <button
+                type="button"
+                onClick={() => setIntakeMode('manual')}
+                className={`btn-outline text-sm px-6 py-3 ${intakeMode === 'manual' ? 'bg-slate-100 border-slate-400' : ''}`}
+              >
+                Enter information manually
+              </button>
+            </div>
+          </section>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {(intakeMode === 'manual' || leaseStatus === 'ready') ? (
+              <>
+              <section className="space-y-4">
+                <h3 className="text-xl font-semibold text-gray-900">Tenant Information</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Full name</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Full name
+                    {autoFilledFields.has('tenant_information.full_name') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled from lease)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -502,7 +526,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('tenant_information.full_name') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
@@ -547,7 +573,12 @@ function IntakePage() {
               <h3 className="text-xl font-semibold text-gray-900">Property Information</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Property address</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Property address
+                    {autoFilledFields.has('property_information.property_address') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled from lease)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -561,11 +592,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('property_information.property_address') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">City</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    City
+                    {autoFilledFields.has('property_information.city') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -579,11 +617,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('property_information.city') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">ZIP code</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    ZIP code
+                    {autoFilledFields.has('property_information.zip_code') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -597,7 +642,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('property_information.zip_code') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
@@ -622,10 +669,93 @@ function IntakePage() {
             </section>
 
             <section className="space-y-4">
+              <h3 className="text-xl font-semibold text-gray-900">Landlord / Property Manager Information</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Landlord or property manager name</span>
+                  <input
+                    type="text"
+                    required
+                    value={form.landlord_information.landlord_name}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        landlord_information: {
+                          ...prev.landlord_information,
+                          landlord_name: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Landlord address</span>
+                  <input
+                    type="text"
+                    required
+                    value={form.landlord_information.landlord_address}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        landlord_information: {
+                          ...prev.landlord_information,
+                          landlord_address: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">City</span>
+                  <input
+                    type="text"
+                    required
+                    value={form.landlord_information.landlord_city}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        landlord_information: {
+                          ...prev.landlord_information,
+                          landlord_city: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">ZIP code</span>
+                  <input
+                    type="text"
+                    required
+                    value={form.landlord_information.landlord_zip}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        landlord_information: {
+                          ...prev.landlord_information,
+                          landlord_zip: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="space-y-4">
               <h3 className="text-xl font-semibold text-gray-900">Lease Information</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Lease start date</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Lease start date
+                    {autoFilledFields.has('lease_information.lease_start_date') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="date"
                     required
@@ -639,11 +769,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('lease_information.lease_start_date') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Lease end date</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Lease end date
+                    {autoFilledFields.has('lease_information.lease_end_date') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="date"
                     required
@@ -657,7 +794,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('lease_information.lease_end_date') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
@@ -681,6 +820,13 @@ function IntakePage() {
                   </select>
                 </label>
               </div>
+              {form.lease_information.lease_start_date &&
+                form.lease_information.lease_end_date &&
+                new Date(form.lease_information.lease_start_date) >= new Date(form.lease_information.lease_end_date) && (
+                  <p className="text-sm text-red-600 mt-2">
+                    Lease start date must be before lease end date.
+                  </p>
+                )}
             </section>
 
             <section className="space-y-4">
@@ -752,7 +898,12 @@ function IntakePage() {
               <h3 className="text-xl font-semibold text-gray-900">Security Deposit</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Deposit amount</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Deposit amount
+                    {autoFilledFields.has('security_deposit_information.deposit_amount') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled from lease)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -766,7 +917,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('security_deposit_information.deposit_amount') ? 'bg-green-50' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
@@ -977,10 +1130,12 @@ function IntakePage() {
               </div>
             ) : null}
 
+              </>
+            ) : null}
 
             <button
               type="submit"
-              disabled={isSubmitting || Boolean(caseId)}
+              disabled={isSubmitting || Boolean(caseId) || (intakeMode !== 'manual' && leaseStatus !== 'ready')}
               className="btn-accent w-full text-lg disabled:opacity-60"
             >
               {isSubmitting ? 'Submitting...' : caseId ? 'Intake Submitted' : 'Submit Intake'}
@@ -1069,6 +1224,23 @@ function DownloadPage() {
                   <ul className="space-y-2">
                     <li>Tenant name: {formatValue(caseData.intake.tenant_information.full_name)}</li>
                     <li>Tenant email: {formatValue(caseData.intake.tenant_information.email)}</li>
+                    <li>
+                      Landlord/Manager:{' '}
+                      {formatValue(caseData.intake.landlord_information?.landlord_name)}
+                    </li>
+                    <li>
+                      Landlord address:{' '}
+                      {formatValue(caseData.intake.landlord_information?.landlord_address)}
+                      {caseData.intake.landlord_information?.landlord_city && (
+                        <>, {caseData.intake.landlord_information.landlord_city}</>
+                      )}
+                      {caseData.intake.landlord_information?.landlord_state && (
+                        <>, {caseData.intake.landlord_information.landlord_state}</>
+                      )}
+                      {caseData.intake.landlord_information?.landlord_zip && (
+                        <> {caseData.intake.landlord_information.landlord_zip}</>
+                      )}
+                    </li>
                     <li>
                       Property address:{' '}
                       {formatValue(caseData.intake.property_information.property_address)}
@@ -1175,6 +1347,192 @@ function DownloadPage() {
   );
 }
 
+// How It Works Page Component
+function HowItWorksPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
+          </div>
+          <nav className="flex gap-6 text-sm">
+            <a href="/blog" className="nav-link">Blog</a>
+            <a href="/faq" className="nav-link">FAQ</a>
+            <a href="/how-it-works" className="nav-link">How It Works</a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="container pb-20">
+        <section className="space-y-6 mb-16">
+          <h2 className="section-title">How It Works</h2>
+          <div className="card-grid md:grid-cols-3">
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">1. Share the facts</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Enter lease dates, deposit details, and what you received. You can upload your lease
+                document and we'll extract key information automatically.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">2. Review the summary</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                We organize everything into a clean, neutral record. Check the details are correct
+                and make any adjustments needed.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">3. Receive your custom guide</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Download a professional summary tailored to your situation. Use it for your records
+                or as a reference when communicating with your landlord.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="text-center">
+          <button onClick={() => navigate('/intake')} className="cta-primary">
+            Get Started
+          </button>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container text-sm text-slate-500">
+          &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// Blog Page Component
+function BlogPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
+          </div>
+          <nav className="flex gap-6 text-sm">
+            <a href="/blog" className="nav-link">Blog</a>
+            <a href="/faq" className="nav-link">FAQ</a>
+            <a href="/how-it-works" className="nav-link">How It Works</a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="container pb-20">
+        <section className="space-y-6 mb-16">
+          <h2 className="section-title">Blog</h2>
+          <div className="card-grid md:grid-cols-2">
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">Know your deposit timeline</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Understand what to track and how to keep clean records. Texas law gives landlords
+                30 days to return your deposit or provide an itemized list of deductions. Knowing
+                this timeline helps you stay informed about your rights.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">Document the basics first</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                A short checklist for deposits, photos, and communications. Take photos when you
+                move in and move out. Keep copies of all written communications with your landlord.
+                Save receipts for any repairs or cleaning you paid for.
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 text-center mt-8">
+            More articles coming soon.
+          </p>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container text-sm text-slate-500">
+          &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// FAQ Page Component
+function FAQPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
+          </div>
+          <nav className="flex gap-6 text-sm">
+            <a href="/blog" className="nav-link">Blog</a>
+            <a href="/faq" className="nav-link">FAQ</a>
+            <a href="/how-it-works" className="nav-link">How It Works</a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="container pb-20">
+        <section className="space-y-6 mb-16">
+          <h2 className="section-title">Frequently Asked Questions</h2>
+          <div className="card-grid md:grid-cols-1 max-w-2xl mx-auto">
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">Is this legal advice?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                No. DepositDefender provides document preparation and informational support only.
+                We help you organize facts and create clear records, but we do not provide legal
+                advice, legal opinions, or legal representation. For legal advice, please consult
+                a licensed attorney.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">Can I edit the summary?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Yes, you can review and adjust all information before downloading your document.
+                We auto-fill what we can from your lease upload, but you have full control to
+                correct or update any field.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">Is this service only for Texas?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Yes. Currently DepositDefender is designed specifically for Texas residential
+                leases. Security deposit laws vary by state, so we focus on Texas to provide
+                accurate, relevant information.
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-lg font-semibold text-slate-900">How much does it cost?</p>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Pricing information coming soon. Our goal is to make this service accessible
+                to all Texas renters who need help organizing their security deposit documentation.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container text-sm text-slate-500">
+          &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // Main App Component
 function App() {
   return (
@@ -1184,6 +1542,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/intake" element={<IntakePage />} />
           <Route path="/download/:caseId" element={<DownloadPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/faq" element={<FAQPage />} />
         </Routes>
       </div>
     </Router>

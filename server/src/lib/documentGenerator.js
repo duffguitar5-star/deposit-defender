@@ -25,12 +25,27 @@ function formatDate(value) {
   return value;
 }
 
+function buildLandlordAddress(landlordInfo) {
+  if (!landlordInfo) return '';
+  const parts = [
+    landlordInfo.landlord_address,
+    [landlordInfo.landlord_city, landlordInfo.landlord_state, landlordInfo.landlord_zip]
+      .filter(Boolean)
+      .join(', '),
+  ].filter(Boolean);
+  return parts.join('\n');
+}
+
 function buildDocumentText(intake) {
   const template = fs.readFileSync(templatePath, 'utf8');
   const today = new Date().toISOString().slice(0, 10);
 
+  const landlordInfo = intake.landlord_information || {};
+
   const replacements = {
     '[Date]': today,
+    '[Landlord or Property Manager Name]': landlordInfo.landlord_name || '',
+    '[Landlord Address]': buildLandlordAddress(landlordInfo),
     '[TENANT NAME]': intake.tenant_information.full_name || '',
     '[PROPERTY ADDRESS]': intake.property_information.property_address || '',
     '[MOVE-OUT DATE]': formatDate(intake.move_out_information.move_out_date),
