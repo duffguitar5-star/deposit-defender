@@ -14,6 +14,11 @@ tmp/
 Thumbs.db
 .DS_Store
 
+# Environment variables
+.env
+server/.env
+client/.env
+
 # Ignore real documents (keep folder)
 documents/*
 !documents/.gitkeep

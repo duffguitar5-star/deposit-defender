@@ -37,6 +37,10 @@ function saveCase(caseId, payload) {
     id: caseId,
     intake: payload,
     createdAt: new Date().toISOString(),
+    paymentStatus: 'pending',
+    stripeSessionId: null,
+    paidAt: null,
+    amount: 1999, // cents
   });
   persistStore();
 }
@@ -45,7 +49,37 @@ function getCase(caseId) {
   return caseStore.get(caseId) || null;
 }
 
+function updateCasePaymentStatus(caseId, paymentData) {
+  const existingCase = caseStore.get(caseId);
+  if (!existingCase) {
+    return null;
+  }
+
+  const updatedCase = {
+    ...existingCase,
+    paymentStatus: paymentData.paymentStatus || existingCase.paymentStatus,
+    stripeSessionId: paymentData.stripeSessionId || existingCase.stripeSessionId,
+    paidAt: paymentData.paidAt || existingCase.paidAt,
+    amount: paymentData.amount || existingCase.amount,
+  };
+
+  caseStore.set(caseId, updatedCase);
+  persistStore();
+  return updatedCase;
+}
+
+function getCaseBySessionId(sessionId) {
+  for (const [, caseData] of caseStore.entries()) {
+    if (caseData.stripeSessionId === sessionId) {
+      return caseData;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   saveCase,
   getCase,
+  updateCasePaymentStatus,
+  getCaseBySessionId,
 };

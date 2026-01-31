@@ -18,6 +18,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+// Stripe webhook needs raw body, so we apply express.json() selectively
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (req, res) => {

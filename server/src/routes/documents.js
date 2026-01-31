@@ -14,6 +14,14 @@ router.get('/:caseId', async (req, res) => {
     });
   }
 
+  // Payment gate: Only allow document generation if payment is completed
+  if (storedCase.paymentStatus !== 'paid') {
+    return res.status(402).json({
+      status: 'payment_required',
+      message: 'Payment required before document generation.',
+    });
+  }
+
   try {
     const pdfBuffer = await generatePdfBuffer(storedCase.intake);
     res.setHeader('Content-Type', 'application/pdf');

@@ -1122,10 +1122,10 @@ function IntakePage() {
               <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
                 <p>Intake received. Case ID: {caseId}</p>
                 <a
-                  href={`/download/${caseId}`}
+                  href={`/review/${caseId}`}
                   className="mt-3 inline-flex btn-outline text-sm"
                 >
-                  Open download page
+                  Continue to Review & Payment
                 </a>
               </div>
             ) : null}
@@ -1158,6 +1158,7 @@ function IntakePage() {
 // Download Page Component
 function DownloadPage() {
   const { caseId } = useParams();
+  const navigate = useNavigate();
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [status, setStatus] = useState('loading');
   const [downloaded, setDownloaded] = useState(false);
@@ -1177,6 +1178,13 @@ function DownloadPage() {
       })
       .then((payload) => {
         if (!isMounted || !payload || payload.status !== 'ok') return;
+
+        // Check payment status
+        if (payload.case.paymentStatus !== 'paid') {
+          navigate(`/review/${caseId}`);
+          return;
+        }
+
         setCaseData(payload.case || null);
         setStatus('ready');
       })
@@ -1189,7 +1197,7 @@ function DownloadPage() {
     return () => {
       isMounted = false;
     };
-  }, [apiBaseUrl, caseId]);
+  }, [apiBaseUrl, caseId, navigate]);
 
   return (
     <div className="app-shell">
@@ -1319,13 +1327,39 @@ function DownloadPage() {
                   </ul>
                 </div>
               ) : null}
-              <a
-                href={`${apiBaseUrl}/api/documents/${caseId}`}
-                onClick={() => setDownloaded(true)}
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`);
+
+                    if (response.status === 402) {
+                      navigate(`/review/${caseId}`);
+                      return;
+                    }
+
+                    if (!response.ok) {
+                      alert('Unable to download document. Please try again.');
+                      return;
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `deposit-defender-${caseId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    setDownloaded(true);
+                  } catch (error) {
+                    alert('Unable to download document. Please try again.');
+                  }
+                }}
                 className="btn-accent"
               >
                 Download informational PDF
-              </a>
+              </button>
               {downloaded ? (
                 <p className="text-sm text-green-700">
                   Download started. Check your downloads folder.
@@ -1533,6 +1567,322 @@ function FAQPage() {
   );
 }
 
+// Payment Cancel Page Component
+function PaymentCancelPage() {
+  const navigate = useNavigate();
+  const [caseId, setCaseId] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const extractedCaseId = params.get('case_id');
+    if (extractedCaseId) {
+      setCaseId(extractedCaseId);
+    }
+  }, []);
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex items-center justify-between">
+          <h1 className="brand">DepositDefender</h1>
+        </div>
+      </header>
+
+      <main className="container py-12">
+        <div className="form-card text-center">
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Payment Cancelled</h2>
+
+          <div className="space-y-6">
+            <div className="text-yellow-600 text-5xl mb-4">⚠</div>
+            <p className="text-slate-600 text-lg">
+              Your payment was not completed. No charges were made to your card.
+            </p>
+
+            <p className="text-slate-600">
+              You can try again when you're ready, or contact support if you need assistance.
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              {caseId ? (
+                <button
+                  onClick={() => navigate(`/review/${caseId}`)}
+                  className="btn-accent"
+                >
+                  Try Again
+                </button>
+              ) : null}
+              <button
+                onClick={() => navigate('/')}
+                className="btn-outline"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-8 notice-card text-left">
+            <p className="text-sm text-slate-600">
+              If you experienced technical difficulties or have questions, please contact our support team.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Payment Success Page Component
+function PaymentSuccessPage() {
+  const navigate = useNavigate();
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const [status, setStatus] = useState('verifying');
+  const [caseId, setCaseId] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+
+    if (!sessionId) {
+      setStatus('error');
+      return;
+    }
+
+    fetch(`${apiBaseUrl}/api/payments/verify/${sessionId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === 'ok' && data.isPaid) {
+          setCaseId(data.caseId);
+          setStatus('success');
+          // Redirect to download page after 2 seconds
+          setTimeout(() => {
+            navigate(`/download/${data.caseId}`);
+          }, 2000);
+        } else {
+          setStatus('pending');
+        }
+      })
+      .catch(() => {
+        setStatus('error');
+      });
+  }, [apiBaseUrl, navigate]);
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex items-center justify-between">
+          <h1 className="brand">DepositDefender</h1>
+        </div>
+      </header>
+
+      <main className="container py-12">
+        <div className="form-card text-center">
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Payment Status</h2>
+
+          {status === 'verifying' ? (
+            <div className="space-y-4">
+              <p className="text-slate-600">Verifying your payment...</p>
+              <div className="animate-pulse">
+                <div className="h-2 bg-slate-200 rounded w-3/4 mx-auto"></div>
+              </div>
+            </div>
+          ) : null}
+
+          {status === 'success' ? (
+            <div className="space-y-4">
+              <div className="text-green-600 text-5xl mb-4">✓</div>
+              <h3 className="text-2xl font-semibold text-green-700">Payment Successful!</h3>
+              <p className="text-slate-600">
+                Your payment has been processed. Redirecting you to your document...
+              </p>
+              {caseId ? (
+                <a
+                  href={`/download/${caseId}`}
+                  className="inline-block mt-4 btn-accent"
+                >
+                  Go to Download Page
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          {status === 'pending' ? (
+            <div className="space-y-4">
+              <p className="text-yellow-600 text-lg font-semibold">Payment Pending</p>
+              <p className="text-slate-600">
+                Your payment is being processed. Please check back in a few moments.
+              </p>
+            </div>
+          ) : null}
+
+          {status === 'error' ? (
+            <div className="space-y-4">
+              <p className="text-red-600 text-lg font-semibold">Verification Error</p>
+              <p className="text-slate-600">
+                Unable to verify your payment. Please contact support if you were charged.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Review Page Component
+function ReviewPage() {
+  const { caseId } = useParams();
+  const navigate = useNavigate();
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const [status, setStatus] = useState('loading');
+  const [caseData, setCaseData] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch(`${apiBaseUrl}/api/cases/${caseId}`)
+      .then((response) => {
+        if (!isMounted) return;
+        if (!response.ok) {
+          setStatus('not_found');
+          return;
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        if (!isMounted || !payload || payload.status !== 'ok') return;
+
+        // If already paid, redirect to download page
+        if (payload.case.paymentStatus === 'paid') {
+          navigate(`/download/${caseId}`);
+          return;
+        }
+
+        setCaseData(payload.case || null);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (isMounted) {
+          setStatus('error');
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiBaseUrl, caseId, navigate]);
+
+  const handleProceedToPayment = async () => {
+    setIsProcessingPayment(true);
+    setPaymentError('');
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/payments/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ caseId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPaymentError(data.message || 'Unable to initiate payment. Please try again.');
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (error) {
+      setPaymentError('Unable to initiate payment. Please try again.');
+      setIsProcessingPayment(false);
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="container flex items-center justify-between">
+          <h1 className="brand">DepositDefender</h1>
+        </div>
+      </header>
+
+      <main className="container py-12">
+        <div className="form-card">
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Review Your Case</h2>
+          <p className="text-slate-600 mb-8">
+            Please review your information before proceeding to payment.
+          </p>
+
+          {status === 'loading' ? (
+            <p className="text-gray-600">Loading your case...</p>
+          ) : null}
+
+          {status === 'not_found' ? (
+            <p className="text-red-600">Case not found. Please verify the link.</p>
+          ) : null}
+
+          {status === 'error' ? (
+            <p className="text-red-600">Unable to load this case right now.</p>
+          ) : null}
+
+          {status === 'ready' && caseData ? (
+            <div className="space-y-6">
+              <div className="card text-sm text-slate-700">
+                <h3 className="text-base font-semibold text-slate-900 mb-3">Case Summary</h3>
+                <ul className="space-y-2">
+                  <li><strong>Tenant name:</strong> {formatValue(caseData.intake.tenant_information.full_name)}</li>
+                  <li><strong>Tenant email:</strong> {formatValue(caseData.intake.tenant_information.email)}</li>
+                  <li><strong>Property address:</strong> {formatValue(caseData.intake.property_information.property_address)}</li>
+                  <li><strong>City:</strong> {formatValue(caseData.intake.property_information.city)}</li>
+                  <li><strong>Deposit amount:</strong> {formatValue(caseData.intake.security_deposit_information.deposit_amount)}</li>
+                  <li><strong>Move-out date:</strong> {formatValue(caseData.intake.move_out_information.move_out_date)}</li>
+                </ul>
+              </div>
+
+              <div className="notice-card">
+                <h3 className="text-lg font-semibold text-slate-900 mb-3">Before You Pay</h3>
+                <ul className="text-sm text-slate-700 space-y-1 mb-4">
+                  {DISCLAIMERS.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="card bg-slate-50">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Pricing</h3>
+                <p className="text-3xl font-bold text-slate-900 mb-1">$19.99</p>
+                <p className="text-sm text-slate-600">One-time fee for document preparation service</p>
+              </div>
+
+              {paymentError ? (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {paymentError}
+                </div>
+              ) : null}
+
+              <button
+                onClick={handleProceedToPayment}
+                disabled={isProcessingPayment}
+                className="btn-accent w-full text-lg disabled:opacity-60"
+              >
+                {isProcessingPayment ? 'Redirecting to payment...' : 'Proceed to Payment'}
+              </button>
+
+              <p className="text-xs text-slate-500 text-center">
+                You will be redirected to Stripe to complete your secure payment.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 // Main App Component
 function App() {
   return (
@@ -1541,6 +1891,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/review/:caseId" element={<ReviewPage />} />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/cancel" element={<PaymentCancelPage />} />
           <Route path="/download/:caseId" element={<DownloadPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/blog" element={<BlogPage />} />
