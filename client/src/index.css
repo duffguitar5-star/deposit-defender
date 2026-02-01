@@ -285,6 +285,7 @@ code {
     order: 2;
     min-height: 480px;
   }
+
 }
 
 @media (max-width: 899px) {

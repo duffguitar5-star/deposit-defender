@@ -7,10 +7,45 @@ const formatValue = (value) => (value ? value : 'Not provided');
 const formatArray = (value) =>
   Array.isArray(value) && value.length > 0 ? value.join(', ') : 'Not provided';
 
-// Home Page Component
-function Home() {
+const navLinks = (
+  <>
+    <a href="/blog" className="nav-link">Blog</a>
+    <a href="/faq" className="nav-link">FAQ</a>
+    <a href="/how-it-works" className="nav-link">How It Works</a>
+  </>
+);
+
+function HeroSection({ variant = 'home', showCta = true }) {
   const navigate = useNavigate();
-  const [showTerms, setShowTerms] = useState(false);
+  const isCompact = variant === 'compact';
+
+  return (
+    <section className={`hero${isCompact ? ' hero-compact' : ''}`}>
+      <div className="hero-content">
+        <p className="accent-chip">Texas renters only</p>
+        <h2 className="hero-title">
+          Worried you're getting screwed on your security deposit?
+        </h2>
+        <p className="hero-subtitle">
+          We organize the facts, timelines, and documents into a clear,
+          professional summary you can use right away.
+        </p>
+        {showCta ? (
+          <button
+            onClick={() => navigate('/intake')}
+            className="cta-primary"
+          >
+            Start Your Defense
+          </button>
+        ) : null}
+      </div>
+      <div className="hero-image" style={{ backgroundImage: `url(${heroImage})` }}></div>
+    </section>
+  );
+}
+
+function AppLayout({ heroVariant = 'compact', showHeroCta = false, showHero = false, children }) {
+  const navigate = useNavigate();
 
   return (
     <div className="app-shell">
@@ -20,34 +55,29 @@ function Home() {
             <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
           </div>
           <nav className="flex gap-6 text-sm">
-            <a href="/blog" className="nav-link">Blog</a>
-            <a href="/faq" className="nav-link">FAQ</a>
-            <a href="/how-it-works" className="nav-link">How It Works</a>
+            {navLinks}
           </nav>
         </div>
       </header>
 
-      <main className="container pb-20">
-        <section className="hero">
-          <div className="hero-content">
-            <p className="accent-chip">Texas renters only</p>
-            <h2 className="hero-title">
-              Worried you're getting screwed on your security deposit?
-            </h2>
-            <p className="hero-subtitle">
-              We organize the facts, timelines, and documents into a clear,
-              professional summary you can use right away.
-            </p>
-            <button
-              onClick={() => navigate('/intake')}
-              className="cta-primary"
-            >
-              Start Your Defense
-            </button>
-          </div>
-          <div className="hero-image" style={{ backgroundImage: `url(${heroImage})` }}></div>
-        </section>
+      {showHero ? (
+        <div className="container">
+          <HeroSection variant={heroVariant} showCta={showHeroCta} />
+        </div>
+      ) : null}
 
+      {children}
+    </div>
+  );
+}
+
+// Home Page Component
+function Home() {
+  const [showTerms, setShowTerms] = useState(false);
+
+  return (
+    <AppLayout heroVariant="home" showHeroCta showHero>
+      <main className="container pb-20">
         <section className="card-grid mb-16">
           <div className="card">
             <h3 className="text-lg font-semibold text-slate-900">Clarity without the chaos</h3>
@@ -106,12 +136,612 @@ function Home() {
           </div>
         </div>
       </footer>
-    </div>
+    </AppLayout>
   );
 }
 
-// Intake Page Component
-function IntakePage() {
+// Step 1: Lease Upload Page
+function LeaseUploadPage() {
+  const navigate = useNavigate();
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const [leaseFile, setLeaseFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleUpload = async () => {
+    if (!leaseFile) {
+      setError('Please select a lease file.');
+      return;
+    }
+
+    const maxFileSize = 10 * 1024 * 1024;
+    if (leaseFile.size > maxFileSize) {
+      setError('File size exceeds 10MB. Please upload a smaller file.');
+      return;
+    }
+
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('lease', leaseFile);
+
+      const response = await fetch(`${apiBaseUrl}/api/cases/lease-extract`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Unable to process lease.');
+        setIsUploading(false);
+        return;
+      }
+
+      // Store extracted data in localStorage for next steps
+      const extractedData = {
+        ...(data.extractedData || {}),
+        leaseText: data.preview || '',
+      };
+      localStorage.setItem('depositDefender_extractedData', JSON.stringify(extractedData));
+
+      navigate('/intake/info');
+    } catch (err) {
+      setError('Unable to upload lease. Please try again.');
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <AppLayout>
+      <main className="container pb-20">
+        <section className="text-center py-12 mb-8">
+          <div className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+            Step 1 of 3
+          </div>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">
+            Upload Your Lease
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            We'll extract the key information from your lease automatically.
+          </p>
+        </section>
+
+        <section className="max-w-xl mx-auto">
+          <div className="card">
+            <div className="space-y-6">
+              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                <input
+                  type="file"
+                  id="lease-upload"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => setLeaseFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <label htmlFor="lease-upload" className="cursor-pointer">
+                  <div className="text-4xl mb-4">📄</div>
+                  <p className="text-slate-700 font-medium mb-2">
+                    {leaseFile ? leaseFile.name : 'Click to select your lease'}
+                  </p>
+                  <p className="text-sm text-slate-500">PDF or image (max 10MB)</p>
+                </label>
+              </div>
+
+              {error && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleUpload}
+                disabled={!leaseFile || isUploading}
+                className="cta-primary w-full disabled:opacity-50"
+              >
+                {isUploading ? 'Processing...' : 'Upload & Continue'}
+              </button>
+
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    localStorage.setItem('depositDefender_extractedData', JSON.stringify({}));
+                    navigate('/intake/info');
+                  }}
+                  className="text-sm text-slate-500 hover:text-slate-700 underline"
+                >
+                  Skip — I'll enter information manually
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </AppLayout>
+  );
+}
+
+// Step 2: Basic Info Page (Name & Email)
+function BasicInfoPage() {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // Check if we have extracted data
+    const stored = localStorage.getItem('depositDefender_extractedData');
+    if (!stored) {
+      navigate('/intake');
+    }
+  }, [navigate]);
+
+  const handleContinue = () => {
+    if (!fullName.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    // Update stored data with name and email
+    const stored = JSON.parse(localStorage.getItem('depositDefender_extractedData') || '{}');
+    stored.tenant_name = fullName.trim();
+    stored.tenant_email = email.trim();
+    localStorage.setItem('depositDefender_extractedData', JSON.stringify(stored));
+
+    navigate('/intake/verify');
+  };
+
+  return (
+    <AppLayout>
+      <main className="container pb-20">
+        <section className="text-center py-12 mb-8">
+          <div className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+            Step 2 of 3
+          </div>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">
+            Enter Your Information
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            We need your name and email to prepare your document.
+          </p>
+        </section>
+
+        <section className="max-w-xl mx-auto">
+          <div className="card">
+            <div className="space-y-6">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Full Name</span>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Smith"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm text-lg p-3"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Email Address</span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm text-lg p-3"
+                />
+              </label>
+
+              {error && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleContinue}
+                className="cta-primary w-full"
+              >
+                Continue
+              </button>
+
+              <button
+                onClick={() => navigate('/intake')}
+                className="btn-outline w-full"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </AppLayout>
+  );
+}
+
+// Step 3: Verification Page (All extracted data)
+function VerificationPage() {
+  const navigate = useNavigate();
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    tenant_information: { full_name: '', email: '', phone: '' },
+    landlord_information: { landlord_name: '', landlord_address: '', landlord_city: '', landlord_state: 'TX', landlord_zip: '', landlord_phone: '' },
+    property_information: { property_address: '', city: '', zip_code: '', county: '' },
+    lease_information: { lease_start_date: '', lease_end_date: '', lease_type: 'written' },
+    move_out_information: { move_out_date: '', forwarding_address_provided: 'unknown', forwarding_address_date: '' },
+    security_deposit_information: { deposit_amount: '', deposit_paid_date: '', deposit_returned: 'no', amount_returned: '' },
+    post_move_out_communications: { itemized_deductions_received: 'unknown', date_itemized_list_received: '', communication_methods_used: [] },
+    additional_notes: { tenant_notes: '' },
+    acknowledgements: { texas_only_confirmation: false, non_legal_service_acknowledged: false },
+    jurisdiction: 'TX',
+  });
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const stored = localStorage.getItem('depositDefender_extractedData');
+    if (!stored) {
+      navigate('/intake');
+      return;
+    }
+
+    const extracted = JSON.parse(stored);
+
+    // Map extracted data to form - validate extractions before using
+    const isValidAddress = (addr) => addr && addr.length > 5 && /^\d+\s+[A-Za-z]/.test(addr) && !/sq\s*ft|bedr|bath/i.test(addr);
+    const isValidName = (name) => name && name.length >= 3 && !/^(property|lease|tenant|agreement|the|this)$/i.test(name.trim());
+    const isValidDate = (date) => date && /^\d{4}-\d{2}-\d{2}$/.test(date);
+
+    setForm(prev => ({
+      ...prev,
+      tenant_information: {
+        ...prev.tenant_information,
+        full_name: extracted.tenant_name || '',
+        email: extracted.tenant_email || '',
+      },
+      landlord_information: {
+        ...prev.landlord_information,
+        landlord_name: isValidName(extracted.landlord_name) ? extracted.landlord_name : '',
+        landlord_address: isValidAddress(extracted.landlord_address) ? extracted.landlord_address : '',
+        landlord_city: extracted.landlord_city || '',
+        landlord_state: extracted.landlord_state || 'TX',
+        landlord_zip: extracted.landlord_zip || '',
+        landlord_phone: extracted.landlord_phone || '',
+      },
+      property_information: {
+        ...prev.property_information,
+        property_address: isValidAddress(extracted.property_address) ? extracted.property_address : '',
+        city: extracted.city || '',
+        zip_code: extracted.zip_code || '',
+        county: extracted.county || '',
+      },
+      lease_information: {
+        ...prev.lease_information,
+        lease_start_date: isValidDate(extracted.lease_start_date) ? extracted.lease_start_date : '',
+        lease_end_date: isValidDate(extracted.lease_end_date) ? extracted.lease_end_date : '',
+      },
+      security_deposit_information: {
+        ...prev.security_deposit_information,
+        deposit_amount: extracted.deposit_amount || '',
+      },
+    }));
+  }, [navigate]);
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!form.tenant_information.full_name || !form.tenant_information.email) {
+      setError('Name and email are required.');
+      return;
+    }
+    if (!form.acknowledgements.texas_only_confirmation || !form.acknowledgements.non_legal_service_acknowledged) {
+      setError('Please confirm the acknowledgements.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/cases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Unable to submit.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Clear stored data
+      localStorage.removeItem('depositDefender_extractedData');
+
+      // Navigate to review page
+      if (data.caseId) {
+        navigate(`/review/${data.caseId}`);
+      }
+    } catch (err) {
+      setError('Unable to submit. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateField = (section, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
+  };
+
+  return (
+    <AppLayout>
+      <main className="container pb-20">
+        <section className="text-center py-8 mb-4">
+          <div className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+            Step 3 of 3
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            Verify Your Information
+          </h2>
+          <p className="text-slate-600 max-w-2xl mx-auto">
+            Review and edit the information extracted from your lease.
+          </p>
+        </section>
+
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Tenant Information */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Tenant Information</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Full Name *</span>
+                <input type="text" required value={form.tenant_information.full_name}
+                  onChange={(e) => updateField('tenant_information', 'full_name', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Email *</span>
+                <input type="email" required value={form.tenant_information.email}
+                  onChange={(e) => updateField('tenant_information', 'email', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Phone (optional)</span>
+                <input type="tel" value={form.tenant_information.phone}
+                  onChange={(e) => updateField('tenant_information', 'phone', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+            </div>
+          </div>
+
+          {/* Property Information */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Property Information</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-sm font-medium text-gray-700">Property Address *</span>
+                <input type="text" required value={form.property_information.property_address}
+                  onChange={(e) => updateField('property_information', 'property_address', e.target.value)}
+                  placeholder="Enter property address"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">City *</span>
+                <input type="text" required value={form.property_information.city}
+                  onChange={(e) => updateField('property_information', 'city', e.target.value)}
+                  placeholder="Enter city"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">ZIP Code *</span>
+                <input type="text" required value={form.property_information.zip_code}
+                  onChange={(e) => updateField('property_information', 'zip_code', e.target.value)}
+                  placeholder="Enter ZIP"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">County *</span>
+                <input type="text" required value={form.property_information.county}
+                  onChange={(e) => updateField('property_information', 'county', e.target.value)}
+                  placeholder="Not in lease - enter manually"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+            </div>
+          </div>
+
+          {/* Landlord Information */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Landlord / Property Manager</h3>
+            {(!form.landlord_information.landlord_name || !form.landlord_information.landlord_address) && (
+              <p className="text-sm text-amber-600 mb-4">⚠️ Landlord info not found in lease - please enter manually</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-sm font-medium text-gray-700">Name *</span>
+                <input type="text" required value={form.landlord_information.landlord_name}
+                  onChange={(e) => updateField('landlord_information', 'landlord_name', e.target.value)}
+                  placeholder="Not found - enter manually"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-sm font-medium text-gray-700">Address *</span>
+                <input type="text" required value={form.landlord_information.landlord_address}
+                  onChange={(e) => updateField('landlord_information', 'landlord_address', e.target.value)}
+                  placeholder="Not found - enter manually"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">City *</span>
+                <input type="text" required value={form.landlord_information.landlord_city}
+                  onChange={(e) => updateField('landlord_information', 'landlord_city', e.target.value)}
+                  placeholder="Not found - enter manually"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">ZIP Code *</span>
+                <input type="text" required value={form.landlord_information.landlord_zip}
+                  onChange={(e) => updateField('landlord_information', 'landlord_zip', e.target.value)}
+                  placeholder="Not found - enter manually"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Phone (optional)</span>
+                <input type="tel" value={form.landlord_information.landlord_phone}
+                  onChange={(e) => updateField('landlord_information', 'landlord_phone', e.target.value)}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm placeholder:text-slate-400 placeholder:italic" />
+              </label>
+            </div>
+          </div>
+
+          {/* Lease Information */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Lease Information</h3>
+            {(!form.lease_information.lease_start_date || !form.lease_information.lease_end_date) && (
+              <p className="text-sm text-amber-600 mb-4">⚠️ Dates not found in lease - please enter manually</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Lease Start Date *</span>
+                <input type="date" required value={form.lease_information.lease_start_date}
+                  onChange={(e) => updateField('lease_information', 'lease_start_date', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Lease End Date *</span>
+                <input type="date" required value={form.lease_information.lease_end_date}
+                  onChange={(e) => updateField('lease_information', 'lease_end_date', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Lease Type</span>
+                <select value={form.lease_information.lease_type}
+                  onChange={(e) => updateField('lease_information', 'lease_type', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                  <option value="written">Written</option>
+                  <option value="oral">Oral</option>
+                  <option value="month-to-month">Month-to-Month</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {/* Move-Out & Deposit */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Move-Out & Security Deposit</h3>
+            {!form.move_out_information.move_out_date && (
+              <p className="text-sm text-amber-600 mb-4">⚠️ Move-out date not in lease - please enter manually</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Move-Out Date *</span>
+                <input type="date" required value={form.move_out_information.move_out_date}
+                  onChange={(e) => updateField('move_out_information', 'move_out_date', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Security Deposit Amount *</span>
+                <input type="text" required value={form.security_deposit_information.deposit_amount}
+                  onChange={(e) => updateField('security_deposit_information', 'deposit_amount', e.target.value)}
+                  placeholder="$1,000.00"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm" />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Forwarding Address Provided?</span>
+                <select value={form.move_out_information.forwarding_address_provided}
+                  onChange={(e) => updateField('move_out_information', 'forwarding_address_provided', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                  <option value="unknown">Unknown</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Deposit Returned?</span>
+                <select value={form.security_deposit_information.deposit_returned}
+                  onChange={(e) => updateField('security_deposit_information', 'deposit_returned', e.target.value)}
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                  <option value="partial">Partial</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Additional Notes (optional)</h3>
+            <textarea
+              value={form.additional_notes.tenant_notes}
+              onChange={(e) => updateField('additional_notes', 'tenant_notes', e.target.value)}
+              rows={3}
+              placeholder="Any additional information about your situation..."
+              className="w-full rounded-md border-gray-300 shadow-sm"
+            />
+          </div>
+
+          {/* Acknowledgements */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Acknowledgements</h3>
+            <div className="space-y-3">
+              <label className="flex items-start space-x-3">
+                <input type="checkbox" required
+                  checked={form.acknowledgements.texas_only_confirmation}
+                  onChange={(e) => updateField('acknowledgements', 'texas_only_confirmation', e.target.checked)}
+                  className="mt-1 rounded border-gray-300" />
+                <span className="text-sm text-gray-700">I confirm this intake is for a Texas residential lease.</span>
+              </label>
+              <label className="flex items-start space-x-3">
+                <input type="checkbox" required
+                  checked={form.acknowledgements.non_legal_service_acknowledged}
+                  onChange={(e) => updateField('acknowledgements', 'non_legal_service_acknowledged', e.target.checked)}
+                  className="mt-1 rounded border-gray-300" />
+                <span className="text-sm text-gray-700">I acknowledge this is a document preparation and informational service only.</span>
+              </label>
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-4">
+            <button onClick={() => navigate('/intake/info')} className="btn-outline flex-1">
+              Back
+            </button>
+            <button onClick={handleSubmit} disabled={isSubmitting} className="cta-primary flex-1 disabled:opacity-50">
+              {isSubmitting ? 'Submitting...' : 'Submit & Continue to Payment'}
+            </button>
+          </div>
+        </div>
+      </main>
+    </AppLayout>
+  );
+}
+
+// OLD Intake Page Component (keeping for reference, will be removed)
+function IntakePage_OLD() {
   const navigate = useNavigate();
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -245,12 +875,12 @@ function IntakePage() {
         return;
       }
 
+      // Auto-redirect to review page after successful submission
+      if (data.caseId) {
+        navigate(`/review/${data.caseId}`);
+        return;
+      }
       setCaseId(data.caseId || '');
-      setLeaseFile(null);
-      setLeaseStatus('');
-      setLeaseMessage('');
-      setLeaseSections([]);
-      setIntakeMode('manual');
     } catch (error) {
       setSubmitError('Unable to submit intake right now.');
     } finally {
@@ -364,6 +994,64 @@ function IntakePage() {
               deposit_amount: extracted.deposit_amount,
             };
             filledFields.add('security_deposit_information.deposit_amount');
+          }
+
+          // Landlord information
+          if (extracted.landlord_name && !prev.landlord_information.landlord_name) {
+            updated.landlord_information = {
+              ...prev.landlord_information,
+              landlord_name: extracted.landlord_name,
+            };
+            filledFields.add('landlord_information.landlord_name');
+          }
+
+          if (extracted.landlord_address && !prev.landlord_information.landlord_address) {
+            updated.landlord_information = {
+              ...updated.landlord_information,
+              landlord_address: extracted.landlord_address,
+            };
+            filledFields.add('landlord_information.landlord_address');
+          }
+
+          if (extracted.landlord_city && !prev.landlord_information.landlord_city) {
+            updated.landlord_information = {
+              ...updated.landlord_information,
+              landlord_city: extracted.landlord_city,
+            };
+            filledFields.add('landlord_information.landlord_city');
+          }
+
+          if (extracted.landlord_state && !prev.landlord_information.landlord_state) {
+            updated.landlord_information = {
+              ...updated.landlord_information,
+              landlord_state: extracted.landlord_state,
+            };
+            filledFields.add('landlord_information.landlord_state');
+          }
+
+          if (extracted.landlord_zip && !prev.landlord_information.landlord_zip) {
+            updated.landlord_information = {
+              ...updated.landlord_information,
+              landlord_zip: extracted.landlord_zip,
+            };
+            filledFields.add('landlord_information.landlord_zip');
+          }
+
+          if (extracted.landlord_phone && !prev.landlord_information.landlord_phone) {
+            updated.landlord_information = {
+              ...updated.landlord_information,
+              landlord_phone: extracted.landlord_phone,
+            };
+            filledFields.add('landlord_information.landlord_phone');
+          }
+
+          // County
+          if (extracted.county && !prev.property_information.county) {
+            updated.property_information = {
+              ...updated.property_information,
+              county: extracted.county,
+            };
+            filledFields.add('property_information.county');
           }
 
           return updated;
@@ -648,7 +1336,12 @@ function IntakePage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">County</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    County
+                    {autoFilledFields.has('property_information.county') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -662,7 +1355,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('property_information.county') ? 'bg-green-50 border-green-300' : ''
+                    }`}
                   />
                 </label>
               </div>
@@ -672,7 +1367,12 @@ function IntakePage() {
               <h3 className="text-xl font-semibold text-gray-900">Landlord / Property Manager Information</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Landlord or property manager name</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Landlord or property manager name
+                    {autoFilledFields.has('landlord_information.landlord_name') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled from lease)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -686,11 +1386,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('landlord_information.landlord_name') ? 'bg-green-50 border-green-300' : ''
+                    }`}
                   />
                 </label>
                 <label className="block sm:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Landlord address</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Landlord address
+                    {autoFilledFields.has('landlord_information.landlord_address') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -704,11 +1411,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('landlord_information.landlord_address') ? 'bg-green-50 border-green-300' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">City</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    City
+                    {autoFilledFields.has('landlord_information.landlord_city') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -722,11 +1436,18 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('landlord_information.landlord_city') ? 'bg-green-50 border-green-300' : ''
+                    }`}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700">ZIP code</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    ZIP code
+                    {autoFilledFields.has('landlord_information.landlord_zip') && (
+                      <span className="ml-2 text-xs text-green-600">(auto-filled)</span>
+                    )}
+                  </span>
                   <input
                     type="text"
                     required
@@ -740,7 +1461,9 @@ function IntakePage() {
                         },
                       }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    className={`mt-1 w-full rounded-md border-gray-300 shadow-sm ${
+                      autoFilledFields.has('landlord_information.landlord_zip') ? 'bg-green-50 border-green-300' : ''
+                    }`}
                   />
                 </label>
               </div>
@@ -1162,9 +1885,10 @@ function DownloadPage() {
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [status, setStatus] = useState('loading');
   const [downloaded, setDownloaded] = useState(false);
-  const [caseData, setCaseData] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     let isMounted = true;
 
     fetch(`${apiBaseUrl}/api/cases/${caseId}`)
@@ -1179,13 +1903,11 @@ function DownloadPage() {
       .then((payload) => {
         if (!isMounted || !payload || payload.status !== 'ok') return;
 
-        // Check payment status
         if (payload.case.paymentStatus !== 'paid') {
           navigate(`/review/${caseId}`);
           return;
         }
 
-        setCaseData(payload.case || null);
         setStatus('ready');
       })
       .catch(() => {
@@ -1199,185 +1921,107 @@ function DownloadPage() {
     };
   }, [apiBaseUrl, caseId, navigate]);
 
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`);
+
+      if (response.status === 402) {
+        navigate(`/review/${caseId}`);
+        return;
+      }
+
+      if (!response.ok) {
+        alert('Unable to download document. Please try again.');
+        setIsDownloading(false);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `deposit-defender-${caseId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setDownloaded(true);
+      setIsDownloading(false);
+    } catch (error) {
+      alert('Unable to download document. Please try again.');
+      setIsDownloading(false);
+    }
+  };
+
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container flex items-center justify-between">
-          <h1 className="brand">DepositDefender</h1>
-        </div>
-      </header>
+    <AppLayout>
+      <main className="container pb-20">
+        {status === 'loading' && (
+          <div className="text-center py-20">
+            <p className="text-slate-600 text-lg">Loading...</p>
+          </div>
+        )}
 
-      <main className="container py-12">
-        <div className="form-card">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Download</h2>
-          <p className="text-slate-600 mb-6">Case ID: {caseId}</p>
+        {status === 'not_found' && (
+          <div className="text-center py-20">
+            <p className="text-red-600 text-lg">Case not found.</p>
+          </div>
+        )}
 
-          {status === 'loading' ? (
-            <p className="text-gray-600">Checking your case...</p>
-          ) : null}
+        {status === 'error' && (
+          <div className="text-center py-20">
+            <p className="text-red-600 text-lg">Unable to load this case.</p>
+          </div>
+        )}
 
-          {status === 'not_found' ? (
-            <p className="text-red-600">Case not found. Please verify the link.</p>
-          ) : null}
+        {status === 'ready' && (
+          <>
+            <section className="text-center py-12 mb-8">
+              <div className="inline-block bg-green-100 text-green-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+                Payment Complete
+              </div>
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                Your Document is Ready
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Your security deposit informational summary has been prepared.
+              </p>
+            </section>
 
-          {status === 'error' ? (
-            <p className="text-red-600">Unable to load this case right now.</p>
-          ) : null}
-
-          {status === 'ready' ? (
-            <div className="space-y-3">
-              {caseData ? (
-                <div className="card text-sm text-slate-700">
-                  <h3 className="text-base font-semibold text-slate-900 mb-3">Review</h3>
-                  <ul className="space-y-2">
-                    <li>Tenant name: {formatValue(caseData.intake.tenant_information.full_name)}</li>
-                    <li>Tenant email: {formatValue(caseData.intake.tenant_information.email)}</li>
-                    <li>
-                      Landlord/Manager:{' '}
-                      {formatValue(caseData.intake.landlord_information?.landlord_name)}
-                    </li>
-                    <li>
-                      Landlord address:{' '}
-                      {formatValue(caseData.intake.landlord_information?.landlord_address)}
-                      {caseData.intake.landlord_information?.landlord_city && (
-                        <>, {caseData.intake.landlord_information.landlord_city}</>
-                      )}
-                      {caseData.intake.landlord_information?.landlord_state && (
-                        <>, {caseData.intake.landlord_information.landlord_state}</>
-                      )}
-                      {caseData.intake.landlord_information?.landlord_zip && (
-                        <> {caseData.intake.landlord_information.landlord_zip}</>
-                      )}
-                    </li>
-                    <li>
-                      Property address:{' '}
-                      {formatValue(caseData.intake.property_information.property_address)}
-                    </li>
-                    <li>City: {formatValue(caseData.intake.property_information.city)}</li>
-                    <li>ZIP code: {formatValue(caseData.intake.property_information.zip_code)}</li>
-                    <li>County: {formatValue(caseData.intake.property_information.county)}</li>
-                    <li>
-                      Lease start date:{' '}
-                      {formatValue(caseData.intake.lease_information.lease_start_date)}
-                    </li>
-                    <li>
-                      Lease end date:{' '}
-                      {formatValue(caseData.intake.lease_information.lease_end_date)}
-                    </li>
-                    <li>
-                      Lease type:{' '}
-                      {formatValue(caseData.intake.lease_information.lease_type)}
-                    </li>
-                    <li>
-                      Move-out date:{' '}
-                      {formatValue(caseData.intake.move_out_information.move_out_date)}
-                    </li>
-                    <li>
-                      Forwarding address provided:{' '}
-                      {formatValue(
-                        caseData.intake.move_out_information.forwarding_address_provided
-                      )}
-                    </li>
-                    <li>
-                      Forwarding address date:{' '}
-                      {formatValue(caseData.intake.move_out_information.forwarding_address_date)}
-                    </li>
-                    <li>
-                      Deposit amount:{' '}
-                      {formatValue(
-                        caseData.intake.security_deposit_information.deposit_amount
-                      )}
-                    </li>
-                    <li>
-                      Deposit paid date:{' '}
-                      {formatValue(
-                        caseData.intake.security_deposit_information.deposit_paid_date
-                      )}
-                    </li>
-                    <li>
-                      Deposit returned:{' '}
-                      {formatValue(
-                        caseData.intake.security_deposit_information.deposit_returned
-                      )}
-                    </li>
-                    <li>
-                      Amount returned:{' '}
-                      {formatValue(
-                        caseData.intake.security_deposit_information.amount_returned
-                      )}
-                    </li>
-                    <li>
-                      Itemized deductions received:{' '}
-                      {formatValue(
-                        caseData.intake.post_move_out_communications.itemized_deductions_received
-                      )}
-                    </li>
-                    <li>
-                      Date itemized list received:{' '}
-                      {formatValue(
-                        caseData.intake.post_move_out_communications.date_itemized_list_received
-                      )}
-                    </li>
-                    <li>
-                      Communication methods:{' '}
-                      {formatArray(
-                        caseData.intake.post_move_out_communications.communication_methods_used
-                      )}
-                    </li>
-                  </ul>
-                </div>
-              ) : null}
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`);
-
-                    if (response.status === 402) {
-                      navigate(`/review/${caseId}`);
-                      return;
-                    }
-
-                    if (!response.ok) {
-                      alert('Unable to download document. Please try again.');
-                      return;
-                    }
-
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `deposit-defender-${caseId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    setDownloaded(true);
-                  } catch (error) {
-                    alert('Unable to download document. Please try again.');
-                  }
-                }}
-                className="btn-accent"
-              >
-                Download informational PDF
-              </button>
-              {downloaded ? (
-                <p className="text-sm text-green-700">
-                  Download started. Check your downloads folder.
+            <section className="max-w-md mx-auto text-center">
+              <div className="card bg-slate-50 p-8">
+                <div className="text-5xl mb-4">📄</div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Security Deposit Summary
+                </h3>
+                <p className="text-sm text-slate-600 mb-6">
+                  PDF document with your lease information and timeline
                 </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
 
-        <div className="mt-8 notice-card text-sm">
-          <ul className="space-y-1">
-            {DISCLAIMERS.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </div>
+                <button
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="cta-primary w-full text-lg disabled:opacity-50"
+                >
+                  {isDownloading ? 'Preparing...' : 'Download PDF'}
+                </button>
+
+                {downloaded && (
+                  <p className="text-sm text-green-700 mt-4">
+                    ✓ Download started. Check your downloads folder.
+                  </p>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-500 mt-6">
+                This document is for informational purposes only. No legal advice is provided.
+              </p>
+            </section>
+          </>
+        )}
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -1386,20 +2030,7 @@ function HowItWorksPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
-          </div>
-          <nav className="flex gap-6 text-sm">
-            <a href="/blog" className="nav-link">Blog</a>
-            <a href="/faq" className="nav-link">FAQ</a>
-            <a href="/how-it-works" className="nav-link">How It Works</a>
-          </nav>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="container pb-20">
         <section className="space-y-6 mb-16">
           <h2 className="section-title">How It Works</h2>
@@ -1440,29 +2071,14 @@ function HowItWorksPage() {
           &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
         </div>
       </footer>
-    </div>
+    </AppLayout>
   );
 }
 
 // Blog Page Component
 function BlogPage() {
-  const navigate = useNavigate();
-
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
-          </div>
-          <nav className="flex gap-6 text-sm">
-            <a href="/blog" className="nav-link">Blog</a>
-            <a href="/faq" className="nav-link">FAQ</a>
-            <a href="/how-it-works" className="nav-link">How It Works</a>
-          </nav>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="container pb-20">
         <section className="space-y-6 mb-16">
           <h2 className="section-title">Blog</h2>
@@ -1495,29 +2111,14 @@ function BlogPage() {
           &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
         </div>
       </footer>
-    </div>
+    </AppLayout>
   );
 }
 
 // FAQ Page Component
 function FAQPage() {
-  const navigate = useNavigate();
-
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="brand-large cursor-pointer" onClick={() => navigate('/')}>DepositDefender</h1>
-          </div>
-          <nav className="flex gap-6 text-sm">
-            <a href="/blog" className="nav-link">Blog</a>
-            <a href="/faq" className="nav-link">FAQ</a>
-            <a href="/how-it-works" className="nav-link">How It Works</a>
-          </nav>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="container pb-20">
         <section className="space-y-6 mb-16">
           <h2 className="section-title">Frequently Asked Questions</h2>
@@ -1563,7 +2164,7 @@ function FAQPage() {
           &copy; {new Date().getFullYear()} DepositDefender &middot; Texas Security Deposit Support
         </div>
       </footer>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -1581,13 +2182,7 @@ function PaymentCancelPage() {
   }, []);
 
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container flex items-center justify-between">
-          <h1 className="brand">DepositDefender</h1>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="container py-12">
         <div className="form-card text-center">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Payment Cancelled</h2>
@@ -1627,7 +2222,7 @@ function PaymentCancelPage() {
           </div>
         </div>
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -1637,6 +2232,9 @@ function PaymentSuccessPage() {
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [status, setStatus] = useState('verifying');
   const [caseId, setCaseId] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY_MS = 2000;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1647,33 +2245,41 @@ function PaymentSuccessPage() {
       return;
     }
 
-    fetch(`${apiBaseUrl}/api/payments/verify/${sessionId}`)
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.status === 'ok' && data.isPaid) {
-          setCaseId(data.caseId);
-          setStatus('success');
-          // Redirect to download page after 2 seconds
-          setTimeout(() => {
-            navigate(`/download/${data.caseId}`);
-          }, 2000);
-        } else {
-          setStatus('pending');
-        }
-      })
-      .catch(() => {
-        setStatus('error');
-      });
+    const verifyPayment = () => {
+      fetch(`${apiBaseUrl}/api/payments/verify/${sessionId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === 'ok' && data.isPaid) {
+            setCaseId(data.caseId);
+            setStatus('success');
+            // Redirect to download page after 2 seconds
+            setTimeout(() => {
+              navigate(`/download/${data.caseId}`);
+            }, 2000);
+          } else {
+            // Payment not yet confirmed, retry if under limit
+            setRetryCount((prev) => {
+              const newCount = prev + 1;
+              if (newCount < MAX_RETRIES) {
+                setTimeout(verifyPayment, RETRY_DELAY_MS);
+                return newCount;
+              } else {
+                setStatus('pending');
+                return newCount;
+              }
+            });
+          }
+        })
+        .catch(() => {
+          setStatus('error');
+        });
+    };
+
+    verifyPayment();
   }, [apiBaseUrl, navigate]);
 
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container flex items-center justify-between">
-          <h1 className="brand">DepositDefender</h1>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="container py-12">
         <div className="form-card text-center">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Payment Status</h2>
@@ -1707,10 +2313,16 @@ function PaymentSuccessPage() {
 
           {status === 'pending' ? (
             <div className="space-y-4">
-              <p className="text-yellow-600 text-lg font-semibold">Payment Pending</p>
+              <p className="text-yellow-600 text-lg font-semibold">Payment Processing</p>
               <p className="text-slate-600">
-                Your payment is being processed. Please check back in a few moments.
+                Your payment is still being processed. Please refresh this page in a few moments.
               </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 btn-primary"
+              >
+                Refresh Page
+              </button>
             </div>
           ) : null}
 
@@ -1724,7 +2336,7 @@ function PaymentSuccessPage() {
           ) : null}
         </div>
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -1739,6 +2351,9 @@ function ReviewPage() {
   const [paymentError, setPaymentError] = useState('');
 
   useEffect(() => {
+    // Scroll to top on page load
+    window.scrollTo(0, 0);
+
     let isMounted = true;
 
     fetch(`${apiBaseUrl}/api/cases/${caseId}`)
@@ -1803,83 +2418,116 @@ function ReviewPage() {
   };
 
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <div className="container flex items-center justify-between">
-          <h1 className="brand">DepositDefender</h1>
-        </div>
-      </header>
+    <AppLayout>
+      <main className="container pb-20">
+        {status === 'loading' ? (
+          <div className="text-center py-20">
+            <p className="text-slate-600 text-lg">Loading your case...</p>
+          </div>
+        ) : null}
 
-      <main className="container py-12">
-        <div className="form-card">
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Review Your Case</h2>
-          <p className="text-slate-600 mb-8">
-            Please review your information before proceeding to payment.
-          </p>
+        {status === 'not_found' ? (
+          <div className="text-center py-20">
+            <p className="text-red-600 text-lg">Case not found. Please verify the link.</p>
+          </div>
+        ) : null}
 
-          {status === 'loading' ? (
-            <p className="text-gray-600">Loading your case...</p>
-          ) : null}
+        {status === 'error' ? (
+          <div className="text-center py-20">
+            <p className="text-red-600 text-lg">Unable to load this case right now.</p>
+          </div>
+        ) : null}
 
-          {status === 'not_found' ? (
-            <p className="text-red-600">Case not found. Please verify the link.</p>
-          ) : null}
+        {status === 'ready' && caseData ? (
+          <>
+            {/* Success Hero Section */}
+            <section className="text-center py-12 mb-8">
+              <div className="inline-block bg-green-100 text-green-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+                Data Received
+              </div>
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                Your Information Has Been Submitted
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Review your details below, then proceed to payment to generate your document.
+              </p>
+            </section>
 
-          {status === 'error' ? (
-            <p className="text-red-600">Unable to load this case right now.</p>
-          ) : null}
-
-          {status === 'ready' && caseData ? (
-            <div className="space-y-6">
-              <div className="card text-sm text-slate-700">
-                <h3 className="text-base font-semibold text-slate-900 mb-3">Case Summary</h3>
-                <ul className="space-y-2">
-                  <li><strong>Tenant name:</strong> {formatValue(caseData.intake.tenant_information.full_name)}</li>
-                  <li><strong>Tenant email:</strong> {formatValue(caseData.intake.tenant_information.email)}</li>
-                  <li><strong>Property address:</strong> {formatValue(caseData.intake.property_information.property_address)}</li>
-                  <li><strong>City:</strong> {formatValue(caseData.intake.property_information.city)}</li>
-                  <li><strong>Deposit amount:</strong> {formatValue(caseData.intake.security_deposit_information.deposit_amount)}</li>
-                  <li><strong>Move-out date:</strong> {formatValue(caseData.intake.move_out_information.move_out_date)}</li>
+            {/* Case Summary Card */}
+            <section className="max-w-2xl mx-auto mb-8">
+              <div className="card">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Case Summary</h3>
+                <ul className="space-y-3 text-sm text-slate-700">
+                  <li className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">Tenant name</span>
+                    <span className="font-medium">{formatValue(caseData.intake.tenant_information.full_name)}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">Email</span>
+                    <span className="font-medium">{formatValue(caseData.intake.tenant_information.email)}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">Property address</span>
+                    <span className="font-medium">{formatValue(caseData.intake.property_information.property_address)}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">City</span>
+                    <span className="font-medium">{formatValue(caseData.intake.property_information.city)}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">Deposit amount</span>
+                    <span className="font-medium">{formatValue(caseData.intake.security_deposit_information.deposit_amount)}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span className="text-slate-500">Move-out date</span>
+                    <span className="font-medium">{formatValue(caseData.intake.move_out_information.move_out_date)}</span>
+                  </li>
                 </ul>
               </div>
+            </section>
 
+            {/* Payment Section */}
+            <section className="max-w-2xl mx-auto mb-8">
+              <div className="card bg-slate-50 text-center">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Document Preparation Fee</h3>
+                <p className="text-4xl font-bold text-slate-900 mb-2">$19.99</p>
+                <p className="text-sm text-slate-600 mb-6">One-time payment. No subscriptions.</p>
+
+                {paymentError ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 mb-4">
+                    {paymentError}
+                  </div>
+                ) : null}
+
+                <button
+                  onClick={handleProceedToPayment}
+                  disabled={isProcessingPayment}
+                  className="cta-primary w-full text-lg disabled:opacity-60"
+                >
+                  {isProcessingPayment ? 'Redirecting to payment...' : 'Proceed to Payment — $19.99'}
+                </button>
+
+                <p className="text-xs text-slate-500 mt-4">
+                  Secure payment powered by Stripe
+                </p>
+              </div>
+            </section>
+
+            {/* Disclaimers */}
+            <section className="max-w-2xl mx-auto">
               <div className="notice-card">
-                <h3 className="text-lg font-semibold text-slate-900 mb-3">Before You Pay</h3>
-                <ul className="text-sm text-slate-700 space-y-1 mb-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Before You Pay</h3>
+                <ul className="text-xs text-slate-600 space-y-1">
                   {DISCLAIMERS.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
                 </ul>
               </div>
-
-              <div className="card bg-slate-50">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">Pricing</h3>
-                <p className="text-3xl font-bold text-slate-900 mb-1">$19.99</p>
-                <p className="text-sm text-slate-600">One-time fee for document preparation service</p>
-              </div>
-
-              {paymentError ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {paymentError}
-                </div>
-              ) : null}
-
-              <button
-                onClick={handleProceedToPayment}
-                disabled={isProcessingPayment}
-                className="btn-accent w-full text-lg disabled:opacity-60"
-              >
-                {isProcessingPayment ? 'Redirecting to payment...' : 'Proceed to Payment'}
-              </button>
-
-              <p className="text-xs text-slate-500 text-center">
-                You will be redirected to Stripe to complete your secure payment.
-              </p>
-            </div>
-          ) : null}
-        </div>
+            </section>
+          </>
+        ) : null}
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -1890,7 +2538,9 @@ function App() {
       <div>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake" element={<LeaseUploadPage />} />
+          <Route path="/intake/info" element={<BasicInfoPage />} />
+          <Route path="/intake/verify" element={<VerificationPage />} />
           <Route path="/review/:caseId" element={<ReviewPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/cancel" element={<PaymentCancelPage />} />
