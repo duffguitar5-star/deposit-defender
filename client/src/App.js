@@ -187,8 +187,8 @@ function LeaseUploadPage() {
 
       // Pass extracted data via React Router state instead of localStorage
       const extractedData = {
-        ...(data.extractedData || {}),
-        leaseText: data.preview || '',
+        ...(data.data.extractedData || {}),
+        leaseText: data.data.preview || '',
       };
 
       navigate('/intake/info', { state: { extractedData } });
@@ -471,8 +471,8 @@ function VerificationPage() {
       }
 
       // Navigate to review page
-      if (data.caseId) {
-        navigate(`/review/${data.caseId}`);
+      if (data.data.caseId) {
+        navigate(`/review/${data.data.caseId}`);
       }
     } catch (err) {
       setError('Unable to submit. Please try again.');
@@ -875,11 +875,11 @@ function IntakePage_OLD() {
       }
 
       // Auto-redirect to review page after successful submission
-      if (data.caseId) {
-        navigate(`/review/${data.caseId}`);
+      if (data.data.caseId) {
+        navigate(`/review/${data.data.caseId}`);
         return;
       }
-      setCaseId(data.caseId || '');
+      setCaseId(data.data.caseId || '');
     } catch (error) {
       setSubmitError('Unable to submit intake right now.');
     } finally {
@@ -928,12 +928,12 @@ function IntakePage_OLD() {
 
       setLeaseStatus('ready');
       setLeaseMessage(data.message || '');
-      setLeaseSections(Array.isArray(data.sections) ? data.sections : []);
-      setLeasePreview(data.preview || '');
+      setLeaseSections(Array.isArray(data.data.sections) ? data.data.sections : []);
+      setLeasePreview(data.data.preview || '');
 
       // Auto-fill form fields from extracted data
-      if (data.extractedData && Object.keys(data.extractedData).length > 0) {
-        const extracted = data.extractedData;
+      if (data.data.extractedData && Object.keys(data.data.extractedData).length > 0) {
+        const extracted = data.data.extractedData;
         const filledFields = new Set();
 
         setForm((prev) => {
@@ -1902,7 +1902,7 @@ function DownloadPage() {
       .then((payload) => {
         if (!isMounted || !payload || payload.status !== 'ok') return;
 
-        if (payload.case.paymentStatus !== 'paid') {
+        if (payload.data.case.paymentStatus !== 'paid') {
           navigate(`/review/${caseId}`);
           return;
         }
@@ -2214,15 +2214,15 @@ function ActionPlanOverviewPage() {
       .then(([caseData, reportData]) => {
         if (!isMounted) return;
 
-        if (caseData?.case?.paymentStatus !== 'paid') {
+        if (caseData?.data?.case?.paymentStatus !== 'paid') {
           navigate(`/review/${caseId}`);
           return;
         }
 
-        setCaseData(caseData.case);
+        setCaseData(caseData.data.case);
 
-        if (reportData.status === 'ok' && reportData.report) {
-          setReport(reportData.report);
+        if (reportData.status === 'ok' && reportData.data.report) {
+          setReport(reportData.data.report);
           setStatus('ready');
         } else {
           setStatus('error');
@@ -3290,8 +3290,8 @@ function PaymentSuccessPage() {
       fetch(`${apiBaseUrl}/api/payments/verify/${sessionId}`)
         .then((response) => response.json())
         .then((data) => {
-          if (data.status === 'ok' && data.isPaid) {
-            navigate(`/action-plan/${data.caseId}`);
+          if (data.status === 'ok' && data.data.isPaid) {
+            navigate(`/action-plan/${data.data.caseId}`);
           } else {
             // Payment not yet confirmed, retry if under limit
             setRetryCount((prev) => {
@@ -3405,12 +3405,12 @@ function ReviewPage() {
         if (!isMounted || !payload || payload.status !== 'ok') return;
 
         // Paid users go straight to the action plan
-        if (payload.case.paymentStatus === 'paid') {
+        if (payload.data.case.paymentStatus === 'paid') {
           navigate(`/action-plan/${caseId}`);
           return;
         }
 
-        setCaseData(payload.case || null);
+        setCaseData(payload.data.case || null);
         setStatus('ready');
       })
       .catch(() => {
@@ -3446,7 +3446,7 @@ function ReviewPage() {
       }
 
       // Redirect to Stripe Checkout
-      window.location.href = data.url;
+      window.location.href = data.data.url;
     } catch (error) {
       setPaymentError('Unable to initiate payment. Please try again.');
       setIsProcessingPayment(false);

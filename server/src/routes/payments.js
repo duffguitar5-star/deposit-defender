@@ -52,8 +52,10 @@ router.post('/create-checkout-session', async (req, res) => {
         if (existingSession.status === 'open') {
           return res.status(200).json({
             status: 'ok',
-            sessionId: existingSession.id,
-            url: existingSession.url,
+            data: {
+              sessionId: existingSession.id,
+              url: existingSession.url,
+            },
           });
         }
       } catch (error) {
@@ -89,8 +91,10 @@ router.post('/create-checkout-session', async (req, res) => {
 
     return res.status(200).json({
       status: 'ok',
-      sessionId: session.id,
-      url: session.url,
+      data: {
+        sessionId: session.id,
+        url: session.url,
+      },
     });
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -196,9 +200,11 @@ router.get('/verify/:sessionId', async (req, res) => {
 
     return res.status(200).json({
       status: 'ok',
-      paymentStatus: session.payment_status,
-      caseId: caseData.id,
-      isPaid: caseData.paymentStatus === 'paid',
+      data: {
+        paymentStatus: session.payment_status,
+        caseId: caseData.id,
+        isPaid: caseData.paymentStatus === 'paid',
+      },
     });
   } catch (error) {
     console.error('Error verifying payment:', error);

@@ -624,8 +624,10 @@ router.post('/', async (req, res) => {
   });
 
   return res.status(201).json({
-    status: 'received',
-    caseId,
+    status: 'ok',
+    data: {
+      caseId,
+    },
     message:
       'Intake received for document preparation. No legal advice is provided.',
   });
@@ -643,88 +645,9 @@ router.get('/:caseId', requireCaseOwnership, (req, res) => {
 
   return res.json({
     status: 'ok',
-    case: storedCase,
-  });
-});
-
-router.post('/:caseId/lease', requireCaseOwnership, upload.single('lease'), async (req, res) => {
-  const storedCase = getCase(req.params.caseId);
-
-  if (!storedCase) {
-    return res.status(404).json({
-      status: 'not_found',
-      message: 'Case not found.',
-    });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({
-      status: 'invalid',
-      message: 'Lease file is required.',
-    });
-  }
-
-  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-  if (!allowedTypes.includes(req.file.mimetype)) {
-    return res.status(400).json({
-      status: 'invalid',
-      message: 'Unsupported file type. Please upload a PDF or image.',
-    });
-  }
-
-  // Validate file content matches declared type (prevent MIME type spoofing)
-  if (!validateFileType(req.file.buffer, req.file.mimetype)) {
-    return res.status(400).json({
-      status: 'invalid',
-      message: 'File content does not match declared type. Please upload a valid PDF, PNG, or JPG file.',
-    });
-  }
-
-  const isImage = req.file.mimetype.startsWith('image/');
-  let text = '';
-
-  try {
-    if (isImage) {
-      text = await extractTextFromImage(req.file.buffer);
-    } else {
-      text = await extractTextFromPdf(req.file.buffer);
-      if (!text || text.trim().length < 40) {
-        text = await extractTextFromPdfOcr(req.file.buffer);
-      }
-      if (!text) {
-        text = extractTextFromBuffer(req.file.buffer);
-      }
-    }
-  } catch (error) {
-    console.error('Lease extraction failed', {
-      route: '/api/cases/:caseId/lease',
-      message: error && error.message ? error.message : String(error),
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-    });
-    return res.status(500).json({
-      status: 'error',
-      message: getLeaseExtractionErrorMessage(error, isImage, req.file.size),
-    });
-  }
-
-  const sections = extractSections(text);
-  const preview = text ? text.slice(0, 600).trim() : '';
-  const extractedData = extractStructuredData(text, sections);
-
-  // Store lease text for Case Analysis Report pipeline
-  if (text && text.trim().length > 0) {
-    await updateCaseLeaseData(req.params.caseId, text, null);
-  }
-
-  return res.json({
-    status: 'ok',
-    message: extractedData
-      ? 'Lease text extracted. Some fields have been identified from your lease.'
-      : 'Lease text extracted for informational organization.',
-    sections,
-    preview,
-    extractedData: extractedData || {},
+    data: {
+      case: storedCase,
+    },
   });
 });
 
@@ -786,12 +709,14 @@ router.post('/lease-extract', upload.single('lease'), async (req, res) => {
 
   return res.json({
     status: 'ok',
+    data: {
+      sections,
+      preview,
+      extractedData: extractedData || {},
+    },
     message: extractedData
       ? 'Lease text extracted. Review the auto-filled fields below and make any needed corrections.'
       : 'Lease text extracted for informational organization.',
-    sections,
-    preview,
-    extractedData: extractedData || {},
   });
 });
 

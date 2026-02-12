@@ -106,8 +106,10 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
 
     return res.json({
       status: 'ok',
-      report,
-      validation,
+      data: {
+        report,
+        validation,
+      },
     });
   } catch (error) {
     console.error('Report generation error:', error);
@@ -141,17 +143,19 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
     // Return limited preview (no full leverage points or procedural steps)
     return res.json({
       status: 'ok',
-      preview: {
-        case_id: report.report_metadata.case_id,
-        timeline_phase: report.timeline.current_status.timeline_phase,
-        days_since_move_out: report.timeline.current_status.days_since_move_out,
-        compliance_summary: report.compliance_checklist.summary,
-        leverage_point_count: report.leverage_points.length,
-        statutory_reference_count: report.statutory_references.length,
-        lease_clause_count: report.lease_clause_citations.length,
-        disclaimer: report.disclaimers.primary,
+      data: {
+        preview: {
+          case_id: report.report_metadata.case_id,
+          timeline_phase: report.timeline.current_status.timeline_phase,
+          days_since_move_out: report.timeline.current_status.days_since_move_out,
+          compliance_summary: report.compliance_checklist.summary,
+          leverage_point_count: report.leverage_points.length,
+          statutory_reference_count: report.statutory_references.length,
+          lease_clause_count: report.lease_clause_citations.length,
+          disclaimer: report.disclaimers.primary,
+        },
+        payment_required: storedCase.paymentStatus !== 'paid',
       },
-      payment_required: storedCase.paymentStatus !== 'paid',
     });
   } catch (error) {
     console.error('Preview generation error:', error);
