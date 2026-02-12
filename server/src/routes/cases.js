@@ -8,12 +8,40 @@ const {
   extractTextFromPdf,
   extractTextFromPdfOcr,
 } = require('../lib/leaseExtraction');
+const { associateCaseWithSession, requireCaseOwnership } = require('../middleware/sessionAuth');
 
 const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+// Magic byte signatures for file type validation
+const FILE_SIGNATURES = {
+  pdf: Buffer.from([0x25, 0x50, 0x44, 0x46]), // %PDF
+  png: Buffer.from([0x89, 0x50, 0x4E, 0x47]), // PNG
+  jpg: Buffer.from([0xFF, 0xD8, 0xFF]), // JPEG
+};
+
+/**
+ * Validate file type by checking magic bytes (file signature)
+ * Prevents MIME type spoofing attacks
+ */
+function validateFileType(buffer, declaredMimetype) {
+  if (!buffer || buffer.length < 4) {
+    return false;
+  }
+
+  if (declaredMimetype === 'application/pdf') {
+    return buffer.slice(0, 4).equals(FILE_SIGNATURES.pdf);
+  } else if (declaredMimetype === 'image/png') {
+    return buffer.slice(0, 4).equals(FILE_SIGNATURES.png);
+  } else if (declaredMimetype.includes('jpeg') || declaredMimetype.includes('jpg')) {
+    return buffer.slice(0, 3).equals(FILE_SIGNATURES.jpg);
+  }
+
+  return false;
+}
 
 const TOPIC_DEFINITIONS = [
   {
@@ -567,7 +595,7 @@ function extractSections(text) {
     };
   });
 }
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const payload = req.body;
   const { valid, errors } = validateIntake(payload);
 
@@ -580,7 +608,11 @@ router.post('/', (req, res) => {
   }
 
   const caseId = uuidv4();
-  saveCase(caseId, payload);
+  await saveCase(caseId, payload);
+
+  // Associate case with current session for access control
+  associateCaseWithSession(req, caseId);
+
   console.log('Intake received', {
     caseId,
     receivedAt: new Date().toISOString(),
@@ -599,7 +631,7 @@ router.post('/', (req, res) => {
   });
 });
 
-router.get('/:caseId', (req, res) => {
+router.get('/:caseId', requireCaseOwnership, (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -615,7 +647,7 @@ router.get('/:caseId', (req, res) => {
   });
 });
 
-router.post('/:caseId/lease', upload.single('lease'), async (req, res) => {
+router.post('/:caseId/lease', requireCaseOwnership, upload.single('lease'), async (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -637,6 +669,14 @@ router.post('/:caseId/lease', upload.single('lease'), async (req, res) => {
     return res.status(400).json({
       status: 'invalid',
       message: 'Unsupported file type. Please upload a PDF or image.',
+    });
+  }
+
+  // Validate file content matches declared type (prevent MIME type spoofing)
+  if (!validateFileType(req.file.buffer, req.file.mimetype)) {
+    return res.status(400).json({
+      status: 'invalid',
+      message: 'File content does not match declared type. Please upload a valid PDF, PNG, or JPG file.',
     });
   }
 
@@ -674,7 +714,7 @@ router.post('/:caseId/lease', upload.single('lease'), async (req, res) => {
 
   // Store lease text for Case Analysis Report pipeline
   if (text && text.trim().length > 0) {
-    updateCaseLeaseData(req.params.caseId, text, null);
+    await updateCaseLeaseData(req.params.caseId, text, null);
   }
 
   return res.json({
@@ -701,6 +741,14 @@ router.post('/lease-extract', upload.single('lease'), async (req, res) => {
     return res.status(400).json({
       status: 'invalid',
       message: 'Unsupported file type. Please upload a PDF or image.',
+    });
+  }
+
+  // Validate file content matches declared type (prevent MIME type spoofing)
+  if (!validateFileType(req.file.buffer, req.file.mimetype)) {
+    return res.status(400).json({
+      status: 'invalid',
+      message: 'File content does not match declared type. Please upload a valid PDF, PNG, or JPG file.',
     });
   }
 

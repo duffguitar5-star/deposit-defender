@@ -9,6 +9,7 @@ const express = require('express');
 const { getCase, updateCaseAnalysisReport } = require('../lib/caseStore');
 const { buildCaseAnalysisReport, validateReport } = require('../lib/CaseAnalysisService');
 const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGenerator');
+const { requireCaseOwnership } = require('../middleware/sessionAuth');
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const router = express.Router();
  *
  * Generate and download Case Analysis Report as PDF
  */
-router.get('/:caseId', async (req, res) => {
+router.get('/:caseId', requireCaseOwnership, async (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -47,7 +48,7 @@ router.get('/:caseId', async (req, res) => {
     }
 
     // Store the generated report
-    updateCaseAnalysisReport(req.params.caseId, report);
+    await updateCaseAnalysisReport(req.params.caseId, report);
 
     // Generate PDF
     const pdfBuffer = await generateReportPdf(report);
@@ -72,7 +73,7 @@ router.get('/:caseId', async (req, res) => {
  *
  * Get Case Analysis Report as JSON
  */
-router.get('/:caseId/json', async (req, res) => {
+router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -101,7 +102,7 @@ router.get('/:caseId/json', async (req, res) => {
     }
 
     // Store the generated report
-    updateCaseAnalysisReport(req.params.caseId, report);
+    await updateCaseAnalysisReport(req.params.caseId, report);
 
     return res.json({
       status: 'ok',
@@ -123,7 +124,7 @@ router.get('/:caseId/json', async (req, res) => {
  * Preview Case Analysis Report (no payment required)
  * Returns a limited preview for UI display
  */
-router.get('/:caseId/preview', async (req, res) => {
+router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {

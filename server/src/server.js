@@ -6,6 +6,7 @@ const cors = require('cors');
 const casesRouter = require('./routes/cases');
 const paymentsRouter = require('./routes/payments');
 const documentsRouter = require('./routes/documents');
+const { sessionMiddleware } = require('./middleware/sessionAuth');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -14,6 +15,7 @@ const corsOptions = {
   origin: clientOrigin,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
+  credentials: true, // Allow credentials (cookies/sessions)
 };
 
 app.use(cors(corsOptions));
@@ -22,6 +24,9 @@ app.options('*', cors(corsOptions));
 // Stripe webhook needs raw body, so we apply express.json() selectively
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '2mb' }));
+
+// Session middleware for case ownership tracking
+app.use(sessionMiddleware);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

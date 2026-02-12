@@ -10,6 +10,8 @@
 
 const path = require('path');
 const fs = require('fs');
+const { parseISO, differenceInCalendarDays, addDays, format, isValid } = require('date-fns');
+const { utcToZonedTime } = require('date-fns-tz');
 
 // Load TX rules knowledge base
 const rulesPath = path.join(__dirname, '..', '..', '..', 'ai', 'tx_security_deposit_rules.json');
@@ -35,15 +37,32 @@ function formatCurrency(amount) {
 }
 
 /**
- * Calculate a deadline date from a move-out date
+ * Calculate deadline date with timezone-aware calendar day arithmetic
+ * Uses Central Time (America/Chicago) for Texas-based calculations
  */
 function calculateDeadlineDate(moveOutDate, daysToAdd) {
   if (!moveOutDate) return 'unknown';
+
   try {
-    const date = new Date(moveOutDate);
-    date.setDate(date.getDate() + daysToAdd);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch {
+    // Parse as ISO date string (YYYY-MM-DD)
+    let date = parseISO(moveOutDate);
+
+    // If invalid, try Date constructor fallback
+    if (!isValid(date)) {
+      date = new Date(moveOutDate);
+      if (!isValid(date)) return 'unknown';
+    }
+
+    // Convert to Central Time (Texas timezone)
+    const texasTime = utcToZonedTime(date, 'America/Chicago');
+
+    // Add calendar days
+    const deadline = addDays(texasTime, daysToAdd);
+
+    // Format consistently
+    return format(deadline, 'MMM d, yyyy');
+  } catch (error) {
+    console.error('Date calculation error:', error);
     return 'unknown';
   }
 }

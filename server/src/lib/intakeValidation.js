@@ -34,6 +34,75 @@ function validateString(errors, path, value) {
   }
 }
 
+function validateEmail(errors, path, value) {
+  if (typeof value !== 'string') {
+    addError(errors, path, 'Expected a string value');
+    return;
+  }
+
+  // RFC 5322 compliant email regex (simplified)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(value)) {
+    addError(errors, path, 'Invalid email format');
+    return;
+  }
+
+  // Additional sanity checks
+  if (value.length > 254) {
+    addError(errors, path, 'Email address too long');
+  }
+}
+
+function validateDate(errors, path, value, label = 'Date') {
+  if (typeof value !== 'string' || !value) {
+    addError(errors, path, `${label} is required`);
+    return null;
+  }
+
+  // Check format YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    addError(errors, path, `${label} must be in YYYY-MM-DD format`);
+    return null;
+  }
+
+  // Validate it's a real date
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    addError(errors, path, `Invalid ${label}`);
+    return null;
+  }
+
+  // Sanity check year range
+  const year = date.getFullYear();
+  if (year < 2000 || year > 2030) {
+    addError(errors, path, `${label} year seems incorrect (${year})`);
+    return null;
+  }
+
+  return date;
+}
+
+function validateAmount(errors, path, value, label = 'Amount') {
+  if (!value) return; // Optional
+
+  // Remove common formatting characters
+  const cleaned = String(value).replace(/[$,\s]/g, '');
+  const num = parseFloat(cleaned);
+
+  if (isNaN(num)) {
+    addError(errors, path, `${label} must be a valid number`);
+    return;
+  }
+
+  if (num < 0) {
+    addError(errors, path, `${label} cannot be negative`);
+  }
+
+  if (num > 1000000) {
+    addError(errors, path, `${label} seems unusually high`);
+  }
+}
+
 function validateOptionalString(errors, path, value) {
   if (value === undefined || value === null || value === '') {
     return;
@@ -84,7 +153,7 @@ function validateIntake(payload) {
     addError(errors, 'tenant_information', 'Required');
   } else {
     validateString(errors, 'tenant_information.full_name', tenantInformation.full_name);
-    validateString(errors, 'tenant_information.email', tenantInformation.email);
+    validateEmail(errors, 'tenant_information.email', tenantInformation.email);
     validateOptionalString(errors, 'tenant_information.phone', tenantInformation.phone);
   }
 
@@ -102,50 +171,54 @@ function validateIntake(payload) {
   if (!isPlainObject(leaseInformation)) {
     addError(errors, 'lease_information', 'Required');
   } else {
-    validateString(errors, 'lease_information.lease_start_date', leaseInformation.lease_start_date);
-    validateString(errors, 'lease_information.lease_end_date', leaseInformation.lease_end_date);
+    const leaseStart = validateDate(errors, 'lease_information.lease_start_date', leaseInformation.lease_start_date, 'Lease start date');
+    const leaseEnd = validateDate(errors, 'lease_information.lease_end_date', leaseInformation.lease_end_date, 'Lease end date');
     validateEnum(errors, 'lease_information.lease_type', leaseInformation.lease_type, ALLOWED_LEASE_TYPES);
+
+    // Cross-field validation: lease end must be after lease start
+    if (leaseStart && leaseEnd && leaseEnd <= leaseStart) {
+      addError(errors, 'lease_information.lease_end_date', 'Lease end date must be after lease start date');
+    }
   }
 
   const moveOutInformation = payload.move_out_information;
   if (!isPlainObject(moveOutInformation)) {
     addError(errors, 'move_out_information', 'Required');
   } else {
-    validateString(errors, 'move_out_information.move_out_date', moveOutInformation.move_out_date);
+    const moveOutDate = validateDate(errors, 'move_out_information.move_out_date', moveOutInformation.move_out_date, 'Move-out date');
     validateEnum(
       errors,
       'move_out_information.forwarding_address_provided',
       moveOutInformation.forwarding_address_provided,
       ALLOWED_YES_NO_UNKNOWN
     );
-    validateOptionalString(
-      errors,
-      'move_out_information.forwarding_address_date',
-      moveOutInformation.forwarding_address_date
-    );
+
+    // Validate forwarding address date if provided
+    if (moveOutInformation.forwarding_address_date) {
+      validateDate(errors, 'move_out_information.forwarding_address_date', moveOutInformation.forwarding_address_date, 'Forwarding address date');
+    }
   }
 
   const securityDepositInformation = payload.security_deposit_information;
   if (!isPlainObject(securityDepositInformation)) {
     addError(errors, 'security_deposit_information', 'Required');
   } else {
-    validateString(errors, 'security_deposit_information.deposit_amount', securityDepositInformation.deposit_amount);
-    validateOptionalString(
-      errors,
-      'security_deposit_information.deposit_paid_date',
-      securityDepositInformation.deposit_paid_date
-    );
+    validateAmount(errors, 'security_deposit_information.deposit_amount', securityDepositInformation.deposit_amount, 'Deposit amount');
+
+    if (securityDepositInformation.deposit_paid_date) {
+      validateDate(errors, 'security_deposit_information.deposit_paid_date', securityDepositInformation.deposit_paid_date, 'Deposit paid date');
+    }
+
     validateEnum(
       errors,
       'security_deposit_information.deposit_returned',
       securityDepositInformation.deposit_returned,
       ALLOWED_DEPOSIT_RETURNED
     );
-    validateOptionalString(
-      errors,
-      'security_deposit_information.amount_returned',
-      securityDepositInformation.amount_returned
-    );
+
+    if (securityDepositInformation.amount_returned) {
+      validateAmount(errors, 'security_deposit_information.amount_returned', securityDepositInformation.amount_returned, 'Amount returned');
+    }
   }
 
   const communications = payload.post_move_out_communications;
@@ -158,11 +231,11 @@ function validateIntake(payload) {
       communications.itemized_deductions_received,
       ALLOWED_YES_NO_UNKNOWN
     );
-    validateOptionalString(
-      errors,
-      'post_move_out_communications.date_itemized_list_received',
-      communications.date_itemized_list_received
-    );
+
+    if (communications.date_itemized_list_received) {
+      validateDate(errors, 'post_move_out_communications.date_itemized_list_received', communications.date_itemized_list_received, 'Date itemized list received');
+    }
+
     validateArrayOfEnums(
       errors,
       'post_move_out_communications.communication_methods_used',

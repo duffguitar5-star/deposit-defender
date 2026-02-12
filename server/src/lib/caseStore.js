@@ -5,6 +5,9 @@ const dataDir = path.join(__dirname, '..', '..', 'data');
 const dataFile = path.join(dataDir, 'cases.json');
 const caseStore = new Map();
 
+// In-memory lock registry to prevent concurrent file writes
+const locks = new Map();
+
 function ensureStoreLoaded() {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -25,14 +28,49 @@ function ensureStoreLoaded() {
   }
 }
 
-function persistStore() {
-  const payload = Object.fromEntries(caseStore.entries());
-  fs.writeFileSync(dataFile, JSON.stringify(payload, null, 2), 'utf8');
+/**
+ * Acquire lock for file writing
+ * @param {string} key - Lock key
+ * @param {number} timeout - Timeout in milliseconds
+ */
+async function acquireLock(key, timeout = 5000) {
+  const start = Date.now();
+  while (locks.has(key)) {
+    if (Date.now() - start > timeout) {
+      throw new Error(`Lock acquisition timeout for ${key}`);
+    }
+    // Wait 10ms before retrying
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  locks.set(key, Date.now());
+}
+
+/**
+ * Release lock for file writing
+ * @param {string} key - Lock key
+ */
+function releaseLock(key) {
+  locks.delete(key);
+}
+
+/**
+ * Persist case store to disk with file locking
+ */
+async function persistStore() {
+  const lockKey = 'cases.json';
+  await acquireLock(lockKey);
+
+  try {
+    const payload = Object.fromEntries(caseStore.entries());
+    await fs.promises.writeFile(dataFile, JSON.stringify(payload, null, 2), 'utf8');
+  } finally {
+    releaseLock(lockKey);
+  }
 }
 
 ensureStoreLoaded();
 
-function saveCase(caseId, payload) {
+async function saveCase(caseId, payload) {
   caseStore.set(caseId, {
     id: caseId,
     intake: payload,
@@ -45,10 +83,10 @@ function saveCase(caseId, payload) {
     leasePageMarkers: null,
     analysisReport: null,
   });
-  persistStore();
+  await persistStore();
 }
 
-function updateCaseLeaseData(caseId, leaseText, pageMarkers = null) {
+async function updateCaseLeaseData(caseId, leaseText, pageMarkers = null) {
   const existingCase = caseStore.get(caseId);
   if (!existingCase) {
     return null;
@@ -61,11 +99,11 @@ function updateCaseLeaseData(caseId, leaseText, pageMarkers = null) {
   };
 
   caseStore.set(caseId, updatedCase);
-  persistStore();
+  await persistStore();
   return updatedCase;
 }
 
-function updateCaseAnalysisReport(caseId, report) {
+async function updateCaseAnalysisReport(caseId, report) {
   const existingCase = caseStore.get(caseId);
   if (!existingCase) {
     return null;
@@ -78,7 +116,7 @@ function updateCaseAnalysisReport(caseId, report) {
   };
 
   caseStore.set(caseId, updatedCase);
-  persistStore();
+  await persistStore();
   return updatedCase;
 }
 
@@ -86,7 +124,7 @@ function getCase(caseId) {
   return caseStore.get(caseId) || null;
 }
 
-function updateCasePaymentStatus(caseId, paymentData) {
+async function updateCasePaymentStatus(caseId, paymentData) {
   const existingCase = caseStore.get(caseId);
   if (!existingCase) {
     return null;
@@ -101,7 +139,7 @@ function updateCasePaymentStatus(caseId, paymentData) {
   };
 
   caseStore.set(caseId, updatedCase);
-  persistStore();
+  await persistStore();
   return updatedCase;
 }
 

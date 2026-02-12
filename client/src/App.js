@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { DISCLAIMERS } from './disclaimers';
 import heroImage from './assets/hero-deposit.png';
 
@@ -173,6 +173,7 @@ function LeaseUploadPage() {
 
       const response = await fetch(`${apiBaseUrl}/api/cases/lease-extract`, {
         method: 'POST',
+        credentials: 'include', // Send session cookie
         body: formData,
       });
 
@@ -184,14 +185,13 @@ function LeaseUploadPage() {
         return;
       }
 
-      // Store extracted data in localStorage for next steps
+      // Pass extracted data via React Router state instead of localStorage
       const extractedData = {
         ...(data.extractedData || {}),
         leaseText: data.preview || '',
       };
-      localStorage.setItem('depositDefender_extractedData', JSON.stringify(extractedData));
 
-      navigate('/intake/info');
+      navigate('/intake/info', { state: { extractedData } });
     } catch (err) {
       setError('Unable to upload lease. Please try again.');
       setIsUploading(false);
@@ -250,8 +250,7 @@ function LeaseUploadPage() {
               <div className="text-center">
                 <button
                   onClick={() => {
-                    localStorage.setItem('depositDefender_extractedData', JSON.stringify({}));
-                    navigate('/intake/info');
+                    navigate('/intake/info', { state: { extractedData: {} } });
                   }}
                   className="btn-outline text-sm px-6 py-3 w-full"
                 >
@@ -269,18 +268,18 @@ function LeaseUploadPage() {
 // Step 2: Basic Info Page (Name & Email)
 function BasicInfoPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Check if we have extracted data
-    const stored = localStorage.getItem('depositDefender_extractedData');
-    if (!stored) {
+    // Check if we have extracted data from previous step
+    if (!location.state?.extractedData) {
       navigate('/intake');
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   const handleContinue = () => {
     if (!fullName.trim()) {
@@ -292,13 +291,14 @@ function BasicInfoPage() {
       return;
     }
 
-    // Update stored data with name and email
-    const stored = JSON.parse(localStorage.getItem('depositDefender_extractedData') || '{}');
-    stored.tenant_name = fullName.trim();
-    stored.tenant_email = email.trim();
-    localStorage.setItem('depositDefender_extractedData', JSON.stringify(stored));
+    // Pass data forward with name and email added
+    const updatedData = {
+      ...location.state.extractedData,
+      tenant_name: fullName.trim(),
+      tenant_email: email.trim(),
+    };
 
-    navigate('/intake/verify');
+    navigate('/intake/verify', { state: { extractedData: updatedData } });
   };
 
   return (
@@ -373,6 +373,7 @@ function BasicInfoPage() {
 // Step 3: Verification Page (All extracted data)
 function VerificationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -391,13 +392,13 @@ function VerificationPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const stored = localStorage.getItem('depositDefender_extractedData');
-    if (!stored) {
+    // Read extracted data from location state
+    if (!location.state?.extractedData) {
       navigate('/intake');
       return;
     }
 
-    const extracted = JSON.parse(stored);
+    const extracted = location.state.extractedData;
 
     // Map extracted data to form - validate extractions before using
     const isValidAddress = (addr) => addr && addr.length > 5 && /^\d+\s+[A-Za-z]/.test(addr) && !/sq\s*ft|bedr|bath/i.test(addr);
@@ -456,6 +457,7 @@ function VerificationPage() {
     try {
       const response = await fetch(`${apiBaseUrl}/api/cases`, {
         method: 'POST',
+        credentials: 'include', // Send session cookie
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -467,9 +469,6 @@ function VerificationPage() {
         setIsSubmitting(false);
         return;
       }
-
-      // Clear stored data
-      localStorage.removeItem('depositDefender_extractedData');
 
       // Navigate to review page
       if (data.caseId) {
@@ -1891,7 +1890,7 @@ function DownloadPage() {
     window.scrollTo(0, 0);
     let isMounted = true;
 
-    fetch(`${apiBaseUrl}/api/cases/${caseId}`)
+    fetch(`${apiBaseUrl}/api/cases/${caseId}`, { credentials: 'include' })
       .then((response) => {
         if (!isMounted) return;
         if (!response.ok) {
@@ -1924,7 +1923,7 @@ function DownloadPage() {
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`);
+      const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`, { credentials: 'include' });
 
       if (response.status === 402) {
         navigate(`/action-plan/${caseId}`);
@@ -2209,8 +2208,8 @@ function ActionPlanOverviewPage() {
 
     // Verify payment and fetch analysis report
     Promise.all([
-      fetch(`${apiBaseUrl}/api/cases/${caseId}`).then(r => r.json()),
-      fetch(`${apiBaseUrl}/api/documents/${caseId}/json`).then(r => r.json())
+      fetch(`${apiBaseUrl}/api/cases/${caseId}`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${apiBaseUrl}/api/documents/${caseId}/json`, { credentials: 'include' }).then(r => r.json())
     ])
       .then(([caseData, reportData]) => {
         if (!isMounted) return;
@@ -3393,7 +3392,7 @@ function ReviewPage() {
 
     let isMounted = true;
 
-    fetch(`${apiBaseUrl}/api/cases/${caseId}`)
+    fetch(`${apiBaseUrl}/api/cases/${caseId}`, { credentials: 'include' })
       .then((response) => {
         if (!isMounted) return;
         if (!response.ok) {

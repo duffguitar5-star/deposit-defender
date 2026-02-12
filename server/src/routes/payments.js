@@ -2,6 +2,7 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getCase, updateCasePaymentStatus, getCaseBySessionId } = require('../lib/caseStore');
 const { PRODUCT_PRICE, PRODUCT_NAME, PRODUCT_DESCRIPTION, CURRENCY } = require('../config/pricing');
+const { canAccessCase } = require('../middleware/sessionAuth');
 
 const router = express.Router();
 
@@ -15,6 +16,14 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Case ID is required.',
+      });
+    }
+
+    // Check session ownership
+    if (!canAccessCase(req, caseId)) {
+      return res.status(403).json({
+        status: 'forbidden',
+        message: 'Access denied. This case does not belong to your session.',
       });
     }
 
@@ -74,7 +83,7 @@ router.post('/create-checkout-session', async (req, res) => {
       },
     });
 
-    updateCasePaymentStatus(caseId, {
+    await updateCasePaymentStatus(caseId, {
       stripeSessionId: session.id,
     });
 
@@ -123,7 +132,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         break;
       }
 
-      updateCasePaymentStatus(caseId, {
+      await updateCasePaymentStatus(caseId, {
         paymentStatus: 'paid',
         paidAt: new Date().toISOString(),
         stripeSessionId: session.id,
@@ -179,7 +188,7 @@ router.get('/verify/:sessionId', async (req, res) => {
     // P0 Reconciliation: If Stripe says paid but local is pending, update local
     if (session.payment_status === 'paid' && caseData.paymentStatus === 'pending') {
       console.log(`Reconciling payment status for case: ${caseData.id}`);
-      caseData = updateCasePaymentStatus(caseData.id, {
+      caseData = await updateCasePaymentStatus(caseData.id, {
         paymentStatus: 'paid',
         paidAt: new Date().toISOString(),
       });

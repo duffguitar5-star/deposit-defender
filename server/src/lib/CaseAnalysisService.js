@@ -2,6 +2,7 @@
 
 const { indexLeaseClauses } = require("./leaseClauseIndexer");
 const { detectIssues } = require("./issueDetectors");
+const { parseISO, differenceInCalendarDays, isValid } = require('date-fns');
 
 /**
  * Core analysis orchestrator.
@@ -29,17 +30,32 @@ function buildCaseAnalysisReport(caseData) {
   // Timeline
   // ─────────────────────────────────────────────
   const moveOutRaw = intake.move_out_information?.move_out_date || null;
-  const moveOutDate = moveOutRaw ? new Date(moveOutRaw) : null;
+  let daysSinceMoveOut = null;
+  let past30Days = null;
 
-  const today = new Date();
-  const daysSinceMoveOut = moveOutDate
-    ? Math.floor((today - moveOutDate) / (1000 * 60 * 60 * 24))
-    : null;
+  // Calculate timeline with timezone-aware date arithmetic
+  if (moveOutRaw) {
+    try {
+      let moveOutDate = parseISO(moveOutRaw);
+      if (!isValid(moveOutDate)) {
+        moveOutDate = new Date(moveOutRaw);
+      }
+
+      if (isValid(moveOutDate)) {
+        const today = new Date();
+        // Use calendar day difference (not time-based milliseconds)
+        daysSinceMoveOut = differenceInCalendarDays(today, moveOutDate);
+        past30Days = daysSinceMoveOut > 30;
+      }
+    } catch (error) {
+      console.error('Timeline calculation error:', error);
+    }
+  }
 
   const timeline = {
     move_out_date: moveOutRaw,
     days_since_move_out: daysSinceMoveOut,
-    past_30_days: daysSinceMoveOut !== null ? daysSinceMoveOut > 30 : null
+    past_30_days: past30Days
   };
 
   // ─────────────────────────────────────────────

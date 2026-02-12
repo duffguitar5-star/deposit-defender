@@ -20,17 +20,29 @@ async function generateReportPdf(report) {
   const html = buildReportHtml(report);
 
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ['--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    timeout: 10000, // 10 second launch timeout
   });
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
-    const pdfBuffer = await page.pdf({
-      format: 'Letter',
-      printBackground: true,
-      margin: { top: '0.75in', right: '0.75in', bottom: '0.75in', left: '0.75in' },
-    });
+
+    // Set content with 15 second timeout
+    await Promise.race([
+      page.setContent(html, { waitUntil: 'load' }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('PDF content loading timed out after 15 seconds')), 15000))
+    ]);
+
+    // Generate PDF with 30 second timeout
+    const pdfBuffer = await Promise.race([
+      page.pdf({
+        format: 'Letter',
+        printBackground: true,
+        margin: { top: '0.75in', right: '0.75in', bottom: '0.75in', left: '0.75in' },
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('PDF generation timed out after 30 seconds')), 30000))
+    ]);
+
     return pdfBuffer;
   } finally {
     await browser.close();
