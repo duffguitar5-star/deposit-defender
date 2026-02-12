@@ -1,0 +1,595 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "metadata": {
+    "title": "Texas Security Deposit Rules Knowledge Base",
+    "version": "1.0.0",
+    "jurisdiction": "TX",
+    "source": "Texas Property Code Chapter 92, Subchapter C",
+    "last_updated": "2025-01-31",
+    "purpose": "Deterministic population of Case Analysis Report sections"
+  },
+
+  "statutes": {
+    "92.101": {
+      "citation": "Tex. Prop. Code § 92.101",
+      "title": "Security Deposit",
+      "summary": "Defines what constitutes a security deposit under Texas law.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.101",
+      "key_provisions": [
+        "A security deposit is any advance of money, other than a rental application deposit or an advance payment of rent, intended to secure performance of a residential lease."
+      ]
+    },
+    "92.102": {
+      "citation": "Tex. Prop. Code § 92.102",
+      "title": "Applicability",
+      "summary": "Specifies that this subchapter applies to all residential leases.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.102",
+      "key_provisions": [
+        "Applies to security deposits made under residential leases."
+      ]
+    },
+    "92.103": {
+      "citation": "Tex. Prop. Code § 92.103",
+      "title": "Obligation to Refund",
+      "summary": "Establishes the 30-day timeline for returning deposits or providing itemization.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.103",
+      "key_provisions": [
+        "Landlord shall refund security deposit within 30 days after tenant surrenders premises.",
+        "The 30-day period begins when tenant provides written statement of forwarding address.",
+        "If deductions are made, landlord must provide written description and itemized list."
+      ],
+      "subsections": {
+        "a": "Refund obligation within 30 days of surrender and forwarding address",
+        "b": "Written itemization required if deductions made"
+      }
+    },
+    "92.104": {
+      "citation": "Tex. Prop. Code § 92.104",
+      "title": "Retention of Security Deposit; Accounting",
+      "summary": "Specifies permissible reasons for retaining a security deposit.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.104",
+      "key_provisions": [
+        "Landlord may retain deposit for damages and charges for which tenant is legally liable under the lease.",
+        "Landlord may not retain deposit for normal wear and tear.",
+        "Landlord may retain for unpaid rent."
+      ]
+    },
+    "92.105": {
+      "citation": "Tex. Prop. Code § 92.105",
+      "title": "Cessation of Owner's Interest",
+      "summary": "Addresses transfer of deposit obligations when property ownership changes.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.105",
+      "key_provisions": [
+        "New owner liable for return of deposit whether or not received from previous owner.",
+        "Previous owner remains liable until deposit transferred or tenant notified of new owner."
+      ]
+    },
+    "92.106": {
+      "citation": "Tex. Prop. Code § 92.106",
+      "title": "Records",
+      "summary": "Requires landlords to maintain records of security deposits.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.106",
+      "key_provisions": [
+        "Landlord shall keep accurate records of all security deposits."
+      ]
+    },
+    "92.107": {
+      "citation": "Tex. Prop. Code § 92.107",
+      "title": "Tenant's Forwarding Address",
+      "summary": "Addresses the requirement for tenant to provide forwarding address.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.107",
+      "key_provisions": [
+        "Tenant's failure to provide forwarding address does not forfeit right to deposit refund.",
+        "Landlord's duty to refund does not mature until forwarding address is provided."
+      ]
+    },
+    "92.108": {
+      "citation": "Tex. Prop. Code § 92.108",
+      "title": "Liability for Withholding Last Month's Rent",
+      "summary": "Addresses tenant liability for using deposit as last month's rent without consent.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.108",
+      "key_provisions": [
+        "Tenant may not withhold rent for last period claiming deposit covers it, unless landlord agrees."
+      ]
+    },
+    "92.109": {
+      "citation": "Tex. Prop. Code § 92.109",
+      "title": "Liability of Landlord",
+      "summary": "Establishes landlord liability for bad faith retention of deposits.",
+      "full_text_url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.109",
+      "key_provisions": [
+        "Landlord who in bad faith retains deposit may be liable for amount wrongfully withheld plus $100 plus three times the deposit wrongfully withheld plus reasonable attorney's fees."
+      ],
+      "subsections": {
+        "a": "Presumption of bad faith if landlord fails to return deposit or provide itemization within 30 days"
+      }
+    }
+  },
+
+  "compliance_rules": [
+    {
+      "rule_id": "deposit_returned",
+      "label": "Security deposit returned",
+      "trigger_condition": {
+        "field": "security_deposit_information.deposit_returned",
+        "operator": "equals",
+        "values": ["yes"]
+      },
+      "status_mapping": {
+        "yes": { "status": "yes", "basis_template": "Tenant indicated the security deposit was returned in full." },
+        "no": { "status": "no", "basis_template": "Tenant indicated the security deposit was not returned." },
+        "partial": { "status": "partial", "basis_template": "Tenant indicated the security deposit was partially returned. Amount returned: {amount_returned}." }
+      },
+      "reference": "Tex. Prop. Code § 92.103(a)",
+      "relevance": "high"
+    },
+    {
+      "rule_id": "itemized_list_provided",
+      "label": "Itemized list of deductions provided",
+      "trigger_condition": {
+        "field": "post_move_out_communications.itemized_deductions_received",
+        "operator": "equals",
+        "values": ["yes", "no", "unknown"]
+      },
+      "status_mapping": {
+        "yes": { "status": "yes", "basis_template": "Tenant indicated an itemized list of deductions was received on {date_itemized_list_received}." },
+        "no": { "status": "no", "basis_template": "Tenant indicated no itemized list of deductions was received." },
+        "unknown": { "status": "unknown", "basis_template": "Tenant indicated uncertainty about whether an itemized list was received." }
+      },
+      "reference": "Tex. Prop. Code § 92.104(b)",
+      "relevance": "high"
+    },
+    {
+      "rule_id": "refund_within_30_days",
+      "label": "Refund or itemization within 30 days",
+      "trigger_condition": {
+        "type": "computed",
+        "computation": "days_since_move_out <= 30 AND (deposit_returned == 'yes' OR itemized_deductions_received == 'yes')",
+        "requires": ["move_out_information.move_out_date", "security_deposit_information.deposit_returned", "post_move_out_communications.itemized_deductions_received"]
+      },
+      "status_mapping": {
+        "true": { "status": "yes", "basis_template": "Based on dates provided, tenant received refund or itemization within the 30-day period commonly referenced in Texas guidance." },
+        "false": { "status": "no", "basis_template": "Based on dates provided, {days_since_move_out} days have passed since move-out. Tenant has not received full refund or itemized list." },
+        "unknown": { "status": "unknown", "basis_template": "Cannot determine timeline compliance; required dates not provided." }
+      },
+      "reference": "Tex. Prop. Code § 92.103(a)",
+      "relevance": "high"
+    },
+    {
+      "rule_id": "forwarding_address_provided",
+      "label": "Tenant provided forwarding address",
+      "trigger_condition": {
+        "field": "move_out_information.forwarding_address_provided",
+        "operator": "equals",
+        "values": ["yes", "no", "unknown"]
+      },
+      "status_mapping": {
+        "yes": { "status": "yes", "basis_template": "Tenant indicated a forwarding address was provided{forwarding_date_clause}." },
+        "no": { "status": "no", "basis_template": "Tenant indicated a forwarding address was not provided. Note: Per publicly available Texas guidance, the 30-day timeline may not begin until forwarding address is provided." },
+        "unknown": { "status": "unknown", "basis_template": "Tenant indicated uncertainty about whether a forwarding address was provided." }
+      },
+      "reference": "Tex. Prop. Code § 92.107",
+      "relevance": "medium",
+      "template_variables": {
+        "forwarding_date_clause": {
+          "condition": "forwarding_address_date IS NOT NULL",
+          "true_value": " on {forwarding_address_date}",
+          "false_value": ""
+        }
+      }
+    },
+    {
+      "rule_id": "itemization_within_30_days",
+      "label": "Itemization received within 30 days",
+      "trigger_condition": {
+        "type": "computed",
+        "computation": "date_itemized_list_received - move_out_date <= 30",
+        "requires": ["move_out_information.move_out_date", "post_move_out_communications.date_itemized_list_received"]
+      },
+      "status_mapping": {
+        "true": { "status": "yes", "basis_template": "Itemized list was received within 30 days of move-out date." },
+        "false": { "status": "no", "basis_template": "Itemized list was received {days_to_itemization} days after move-out, exceeding the 30-day period commonly referenced in Texas guidance." },
+        "not_applicable": { "status": "not_applicable", "basis_template": "No itemized list was received; this check is not applicable." },
+        "unknown": { "status": "unknown", "basis_template": "Cannot determine; itemization receipt date not provided." }
+      },
+      "reference": "Tex. Prop. Code § 92.103(a)",
+      "relevance": "high"
+    }
+  ],
+
+  "leverage_point_rules": [
+    {
+      "point_id": "deadline_missed_no_refund",
+      "title": "30-day timeline observation (no refund)",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "computed.days_since_move_out", "operator": "gt", "value": 30 },
+          { "field": "security_deposit_information.deposit_returned", "operator": "equals", "value": "no" }
+        ]
+      },
+      "rank_weight": 100,
+      "observation_template": "According to the dates provided, more than 30 days ({days_since_move_out} days) have passed since the stated move-out date. The tenant indicates the security deposit has not been returned.",
+      "supporting_facts_template": [
+        { "fact": "Move-out date: {move_out_date}", "source": "tenant_intake" },
+        { "fact": "Days elapsed: {days_since_move_out}", "source": "computed" },
+        { "fact": "Deposit returned: No", "source": "tenant_intake" }
+      ],
+      "statutory_context": "Publicly available Texas guidance commonly references a 30-day timeline for deposit refund or itemization. See Tex. Prop. Code § 92.103."
+    },
+    {
+      "point_id": "deadline_missed_no_itemization",
+      "title": "30-day timeline observation (no itemization)",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "computed.days_since_move_out", "operator": "gt", "value": 30 },
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] },
+          { "field": "post_move_out_communications.itemized_deductions_received", "operator": "equals", "value": "no" }
+        ]
+      },
+      "rank_weight": 95,
+      "observation_template": "According to the dates provided, more than 30 days have passed since move-out. The tenant indicates no itemized list of deductions has been received despite partial or no return of the deposit.",
+      "supporting_facts_template": [
+        { "fact": "Move-out date: {move_out_date}", "source": "tenant_intake" },
+        { "fact": "Deposit returned: {deposit_returned}", "source": "tenant_intake" },
+        { "fact": "Itemized list received: No", "source": "tenant_intake" }
+      ],
+      "statutory_context": "When deductions are made from a security deposit, publicly available Texas guidance references a requirement to provide an itemized list. See Tex. Prop. Code § 92.104(b)."
+    },
+    {
+      "point_id": "partial_return_no_itemization",
+      "title": "Partial return without itemization",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "security_deposit_information.deposit_returned", "operator": "equals", "value": "partial" },
+          { "field": "post_move_out_communications.itemized_deductions_received", "operator": "equals", "value": "no" }
+        ]
+      },
+      "rank_weight": 85,
+      "observation_template": "The tenant indicates the security deposit was partially returned (amount: {amount_returned}) but no itemized list of deductions was provided.",
+      "supporting_facts_template": [
+        { "fact": "Deposit amount: {deposit_amount}", "source": "tenant_intake" },
+        { "fact": "Amount returned: {amount_returned}", "source": "tenant_intake" },
+        { "fact": "Itemized list received: No", "source": "tenant_intake" }
+      ],
+      "statutory_context": "Publicly available Texas guidance references a requirement to provide written itemization when deductions are made from a security deposit. See Tex. Prop. Code § 92.104(b)."
+    },
+    {
+      "point_id": "no_forwarding_address_timeline",
+      "title": "Forwarding address and timeline",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "move_out_information.forwarding_address_provided", "operator": "equals", "value": "no" },
+          { "field": "security_deposit_information.deposit_returned", "operator": "equals", "value": "no" }
+        ]
+      },
+      "rank_weight": 50,
+      "observation_template": "The tenant indicates a forwarding address was not provided to the landlord. According to publicly available Texas guidance, the 30-day refund timeline may not begin until a forwarding address is provided in writing.",
+      "supporting_facts_template": [
+        { "fact": "Forwarding address provided: No", "source": "tenant_intake" }
+      ],
+      "statutory_context": "Publicly available Texas guidance indicates that a tenant's failure to provide a forwarding address does not forfeit the right to a refund, but the landlord's obligation to refund may not mature until the address is provided. See Tex. Prop. Code § 92.107."
+    },
+    {
+      "point_id": "lease_clause_extended_timeline",
+      "title": "Lease clause timeline observation",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "lease_extraction.deposit_timeline_days", "operator": "gt", "value": 30 },
+          { "field": "lease_extraction.deposit_timeline_days", "operator": "exists", "value": true }
+        ]
+      },
+      "rank_weight": 75,
+      "observation_template": "The uploaded lease appears to reference a {lease_timeline_days}-day timeline for deposit return. Publicly available Texas guidance commonly references a 30-day timeline.",
+      "supporting_facts_template": [
+        { "fact": "Lease states: {lease_deposit_clause_excerpt}", "source": "lease_extraction" },
+        { "fact": "Texas guidance commonly references: 30 days", "source": "computed" }
+      ],
+      "statutory_context": "Publicly available Texas guidance references a 30-day timeline. Lease clauses that conflict with statutory requirements may not supersede them. See Tex. Prop. Code § 92.103.",
+      "lease_clause_link": "auto_link_deposit_clause"
+    },
+    {
+      "point_id": "written_communication_exists",
+      "title": "Written communication record",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "OR",
+        "conditions": [
+          { "field": "post_move_out_communications.communication_methods_used", "operator": "contains", "value": "email" },
+          { "field": "post_move_out_communications.communication_methods_used", "operator": "contains", "value": "mail" }
+        ]
+      },
+      "rank_weight": 40,
+      "observation_template": "The tenant indicates written communication ({communication_methods}) was used after move-out. Written records may be useful for documentation purposes.",
+      "supporting_facts_template": [
+        { "fact": "Communication methods: {communication_methods_list}", "source": "tenant_intake" }
+      ],
+      "statutory_context": null
+    },
+    {
+      "point_id": "normal_wear_deduction_concern",
+      "title": "Potential normal wear and tear observation",
+      "trigger_condition": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] },
+          { "field": "additional_notes.tenant_notes", "operator": "contains_any", "value": ["wear", "tear", "normal", "carpet", "paint", "cleaning"] }
+        ]
+      },
+      "rank_weight": 60,
+      "observation_template": "The tenant's notes reference terms that may relate to normal wear and tear. Publicly available Texas guidance indicates that landlords may not retain deposits for normal wear and tear.",
+      "supporting_facts_template": [
+        { "fact": "Tenant notes mention: wear/tear/normal use concerns", "source": "tenant_intake" }
+      ],
+      "statutory_context": "Publicly available Texas guidance indicates that a landlord may not retain a security deposit for normal wear and tear. See Tex. Prop. Code § 92.104."
+    }
+  ],
+
+  "statutory_reference_rules": [
+    {
+      "reference_id": "92.103",
+      "citation": "Tex. Prop. Code § 92.103",
+      "title": "Obligation to Refund",
+      "summary": "This section addresses the general timeline for return of security deposits and provision of itemization.",
+      "include_when": {
+        "type": "always",
+        "reason": "Core statute for all security deposit matters."
+      },
+      "relevance_template": "Referenced because the tenant's situation involves a security deposit and timeline questions."
+    },
+    {
+      "reference_id": "92.104",
+      "citation": "Tex. Prop. Code § 92.104",
+      "title": "Retention of Security Deposit; Accounting",
+      "summary": "This section addresses permissible reasons for retaining a security deposit and the requirement for itemization.",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] }
+        ]
+      },
+      "relevance_template": "Referenced because the tenant indicates the deposit was not fully returned."
+    },
+    {
+      "reference_id": "92.107",
+      "citation": "Tex. Prop. Code § 92.107",
+      "title": "Tenant's Forwarding Address",
+      "summary": "This section addresses the relationship between providing a forwarding address and the refund timeline.",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "move_out_information.forwarding_address_provided", "operator": "in", "value": ["no", "unknown"] }
+        ]
+      },
+      "relevance_template": "Referenced because the tenant's forwarding address status may affect timeline calculations."
+    },
+    {
+      "reference_id": "92.109",
+      "citation": "Tex. Prop. Code § 92.109",
+      "title": "Liability of Landlord",
+      "summary": "This section addresses potential landlord liability in security deposit matters.",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "computed.days_since_move_out", "operator": "gt", "value": 30 },
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] }
+        ],
+        "operator": "AND"
+      },
+      "relevance_template": "Referenced because publicly available Texas guidance addresses landlord liability when the 30-day timeline has passed without refund or itemization."
+    },
+    {
+      "reference_id": "92.101",
+      "citation": "Tex. Prop. Code § 92.101",
+      "title": "Security Deposit",
+      "summary": "This section defines what constitutes a security deposit under Texas law.",
+      "include_when": {
+        "type": "always",
+        "reason": "Foundational definition for security deposit matters."
+      },
+      "relevance_template": "Referenced as the foundational definition of security deposits in Texas."
+    }
+  ],
+
+  "procedural_step_rules": [
+    {
+      "step_id": "gather_lease",
+      "step_number": 1,
+      "title": "Gather lease documentation",
+      "description": "Some tenants choose to gather copies of their signed lease agreement, including any amendments or addenda, for their records.",
+      "category": "documentation",
+      "include_when": { "type": "always" },
+      "resources": [],
+      "applicability_note": null
+    },
+    {
+      "step_id": "gather_deposit_proof",
+      "step_number": 2,
+      "title": "Gather deposit payment records",
+      "description": "Some tenants choose to gather proof of the security deposit payment, such as bank records, canceled checks, or receipts.",
+      "category": "documentation",
+      "include_when": { "type": "always" },
+      "resources": [],
+      "applicability_note": null
+    },
+    {
+      "step_id": "gather_move_out_docs",
+      "step_number": 3,
+      "title": "Gather move-out documentation",
+      "description": "Some tenants choose to gather move-out inspection reports, photos of the property at move-out, and any forwarding address documentation.",
+      "category": "documentation",
+      "include_when": { "type": "always" },
+      "resources": [],
+      "applicability_note": null
+    },
+    {
+      "step_id": "gather_communications",
+      "step_number": 4,
+      "title": "Gather communication records",
+      "description": "Some tenants choose to compile copies of all written communications with the landlord regarding the security deposit, including emails, texts, and letters.",
+      "category": "documentation",
+      "include_when": { "type": "always" },
+      "resources": [],
+      "applicability_note": null
+    },
+    {
+      "step_id": "provide_forwarding_address",
+      "step_number": 5,
+      "title": "Provide forwarding address in writing",
+      "description": "According to publicly available Texas guidance, a tenant may provide a written forwarding address to the landlord. Some tenants choose to do this via certified mail with return receipt to create a record.",
+      "category": "communication",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "move_out_information.forwarding_address_provided", "operator": "in", "value": ["no", "unknown"] }
+        ]
+      },
+      "resources": [],
+      "applicability_note": "Relevant if a forwarding address has not yet been provided to the landlord."
+    },
+    {
+      "step_id": "written_correspondence",
+      "step_number": 6,
+      "title": "Send written correspondence",
+      "description": "Some tenants choose to send written correspondence to their landlord documenting the facts of their situation, including dates, amounts, and a request for the deposit refund or itemized deduction list. This is not a demand letter.",
+      "category": "communication",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] }
+        ]
+      },
+      "resources": [],
+      "applicability_note": "Relevant if the deposit has not been fully returned."
+    },
+    {
+      "step_id": "consult_attorney",
+      "step_number": 7,
+      "title": "Consult a licensed Texas attorney",
+      "description": "A licensed Texas attorney can provide legal advice specific to individual circumstances. The State Bar of Texas provides a lawyer referral service.",
+      "category": "legal_consultation",
+      "include_when": { "type": "always" },
+      "resources": [
+        {
+          "title": "State Bar of Texas Lawyer Referral",
+          "url": "https://www.texasbar.com/AM/Template.cfm?Section=Lawyer_Referral_Service_LRIS_",
+          "description": "Official lawyer referral service provided by the State Bar of Texas."
+        }
+      ],
+      "applicability_note": null
+    },
+    {
+      "step_id": "small_claims_info",
+      "step_number": 8,
+      "title": "Learn about small claims court",
+      "description": "Texas Justice of the Peace courts handle small claims matters up to $20,000. Information about filing procedures is available through local JP courts. This is informational only and not a recommendation to file.",
+      "category": "court_information",
+      "include_when": {
+        "type": "conditional",
+        "conditions": [
+          { "field": "computed.days_since_move_out", "operator": "gt", "value": 30 },
+          { "field": "security_deposit_information.deposit_returned", "operator": "in", "value": ["no", "partial"] }
+        ],
+        "operator": "AND"
+      },
+      "resources": [
+        {
+          "title": "Texas Justice Courts",
+          "url": "https://www.txcourts.gov/about-texas-courts/trial-courts/justice-of-the-peace-courts/",
+          "description": "Information about Texas Justice of the Peace courts."
+        },
+        {
+          "title": "TexasLawHelp.org - Small Claims",
+          "url": "https://texaslawhelp.org/article/small-claims-court",
+          "description": "Free legal information about small claims procedures in Texas."
+        }
+      ],
+      "applicability_note": "Informational resource if the 30-day timeline has passed without resolution."
+    }
+  ],
+
+  "evidence_checklist_template": {
+    "categories": [
+      {
+        "category_id": "lease_documents",
+        "label": "Lease Documents",
+        "items": [
+          { "item_id": "signed_lease", "label": "Signed lease agreement", "importance": "high", "detection_field": "lease_information.lease_type" },
+          { "item_id": "lease_amendments", "label": "Lease amendments or addenda", "importance": "medium", "detection_field": null },
+          { "item_id": "move_in_inspection", "label": "Move-in inspection report", "importance": "medium", "detection_field": null }
+        ]
+      },
+      {
+        "category_id": "financial_records",
+        "label": "Financial Records",
+        "items": [
+          { "item_id": "deposit_receipt", "label": "Security deposit payment receipt", "importance": "high", "detection_field": "security_deposit_information.deposit_paid_date" },
+          { "item_id": "bank_records", "label": "Bank records showing deposit payment", "importance": "medium", "detection_field": null },
+          { "item_id": "rent_payment_history", "label": "Rent payment history", "importance": "low", "detection_field": null }
+        ]
+      },
+      {
+        "category_id": "move_out_documentation",
+        "label": "Move-Out Documentation",
+        "items": [
+          { "item_id": "move_out_inspection", "label": "Move-out inspection report", "importance": "high", "detection_field": null },
+          { "item_id": "key_return_receipt", "label": "Key return receipt or documentation", "importance": "medium", "detection_field": null },
+          { "item_id": "forwarding_address_proof", "label": "Proof of forwarding address delivery", "importance": "high", "detection_field": "move_out_information.forwarding_address_date" }
+        ]
+      },
+      {
+        "category_id": "communication_records",
+        "label": "Communication Records",
+        "items": [
+          { "item_id": "emails", "label": "Email correspondence with landlord", "importance": "high", "detection_field": null },
+          { "item_id": "text_messages", "label": "Text message records", "importance": "medium", "detection_field": null },
+          { "item_id": "certified_mail", "label": "Certified mail receipts", "importance": "high", "detection_field": null },
+          { "item_id": "itemized_list", "label": "Itemized deduction list from landlord", "importance": "high", "detection_field": "post_move_out_communications.itemized_deductions_received" }
+        ]
+      },
+      {
+        "category_id": "property_condition",
+        "label": "Property Condition Evidence",
+        "items": [
+          { "item_id": "move_out_photos", "label": "Photos of property at move-out", "importance": "high", "detection_field": null },
+          { "item_id": "move_out_video", "label": "Video walkthrough at move-out", "importance": "medium", "detection_field": null },
+          { "item_id": "move_in_photos", "label": "Photos of property at move-in (for comparison)", "importance": "medium", "detection_field": null }
+        ]
+      }
+    ]
+  },
+
+  "deadline_computation_rules": [
+    {
+      "deadline_id": "30_day_refund_deadline",
+      "label": "General 30-day timeline reference (from move-out)",
+      "computation": {
+        "base_date_field": "move_out_information.move_out_date",
+        "add_days": 30
+      },
+      "reference": "Tex. Prop. Code § 92.103",
+      "notes": "This is the general timeline commonly referenced in Texas guidance. The actual trigger may depend on when a forwarding address was provided."
+    },
+    {
+      "deadline_id": "30_day_from_forwarding",
+      "label": "General 30-day timeline reference (from forwarding address)",
+      "computation": {
+        "base_date_field": "move_out_information.forwarding_address_date",
+        "add_days": 30,
+        "fallback": null
+      },
+      "reference": "Tex. Prop. Code § 92.103, § 92.107",
+      "notes": "According to publicly available Texas guidance, the 30-day period may run from when the tenant provides a forwarding address in writing."
+    }
+  ]
+}

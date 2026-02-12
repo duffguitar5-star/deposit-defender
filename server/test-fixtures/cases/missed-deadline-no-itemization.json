@@ -1,0 +1,28 @@
+{
+  "case_id": "fixture-missed-deadline",
+  "jurisdiction": "TX",
+  "move_out_information": {
+    "move_out_date": "2024-05-31",
+    "surrender_date": "2024-05-31"
+  },
+  "deposit_information": {
+    "deposit_amount": 1000,
+    "returned_amount": 0,
+    "return_date": null,
+    "itemized_deductions_provided": false
+  },
+  "forwarding_address_information": {
+    "provided": true,
+    "provided_date": "2024-06-01"
+  },
+  "property_information": {
+    "address": "123 Test St, Austin, TX 78701"
+  },
+  "lease_information": {
+    "lease_text": "SECURITY DEPOSIT. Tenant pays $1,000 as a security deposit. Landlord may deduct for damages beyond normal wear and tear. FORWARDING ADDRESS. Tenant must provide forwarding address in writing."
+  },
+  "correspondence_information": {
+    "landlord_letters": [],
+    "tenant_letters": []
+  }
+}

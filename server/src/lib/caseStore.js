@@ -41,8 +41,45 @@ function saveCase(caseId, payload) {
     stripeSessionId: null,
     paidAt: null,
     amount: 1999, // cents
+    leaseText: null,
+    leasePageMarkers: null,
+    analysisReport: null,
   });
   persistStore();
+}
+
+function updateCaseLeaseData(caseId, leaseText, pageMarkers = null) {
+  const existingCase = caseStore.get(caseId);
+  if (!existingCase) {
+    return null;
+  }
+
+  const updatedCase = {
+    ...existingCase,
+    leaseText,
+    leasePageMarkers: pageMarkers,
+  };
+
+  caseStore.set(caseId, updatedCase);
+  persistStore();
+  return updatedCase;
+}
+
+function updateCaseAnalysisReport(caseId, report) {
+  const existingCase = caseStore.get(caseId);
+  if (!existingCase) {
+    return null;
+  }
+
+  const updatedCase = {
+    ...existingCase,
+    analysisReport: report,
+    analysisGeneratedAt: new Date().toISOString(),
+  };
+
+  caseStore.set(caseId, updatedCase);
+  persistStore();
+  return updatedCase;
 }
 
 function getCase(caseId) {
@@ -82,4 +119,6 @@ module.exports = {
   getCase,
   updateCasePaymentStatus,
   getCaseBySessionId,
+  updateCaseLeaseData,
+  updateCaseAnalysisReport,
 };

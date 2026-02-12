@@ -1,0 +1,43 @@
+{
+  "case_id": "fixture-cleaning-deduction",
+  "jurisdiction": "TX",
+
+  "tenant": {
+    "name": "Test Tenant",
+    "forwarding_address_provided": true,
+    "forwarding_address_date": "2024-07-02"
+  },
+
+  "property": {
+    "address": "456 Sample Ave, Dallas, TX 75201"
+  },
+
+  "deposit": {
+    "amount": 1200,
+    "returned_amount": 800,
+    "return_date": "2024-07-20",
+    "itemized_deductions_provided": true,
+    "deductions": [
+      {
+        "reason": "Cleaning fee",
+        "amount": 400
+      }
+    ]
+  },
+
+  "tenancy": {
+    "move_out_date": "2024-06-30",
+    "surrender_date": "2024-06-30"
+  },
+
+  "lease": {
+    "text": "CLEANING. Tenant shall return the premises clean. SECURITY DEPOSIT. Deductions may be made for damages beyond normal wear and tear."
+  },
+
+  "correspondence": {
+    "landlord_letters": [
+      "We retained $400 for cleaning."
+    ],
+    "tenant_letters": []
+  }
+}

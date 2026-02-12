@@ -297,3 +297,50 @@ code {
     order: 2;
   }
 }
+
+/* Mobile-specific fixes for iOS Safari and Android Chrome */
+@media (max-width: 480px) {
+  .brand-large {
+    font-size: 1.75rem;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* Prevent text size adjustment on orientation change (iOS) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Smooth scrolling for scroll-to-top */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* iOS Safari overscroll behavior */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Ensure buttons have proper touch behavior */
+button {
+  touch-action: manipulation;
+}

@@ -167,12 +167,21 @@ router.get('/verify/:sessionId', async (req, res) => {
       });
     }
 
-    const caseData = getCaseBySessionId(sessionId);
+    let caseData = getCaseBySessionId(sessionId);
 
     if (!caseData) {
       return res.status(404).json({
         status: 'not_found',
         message: 'Case not found for this session.',
+      });
+    }
+
+    // P0 Reconciliation: If Stripe says paid but local is pending, update local
+    if (session.payment_status === 'paid' && caseData.paymentStatus === 'pending') {
+      console.log(`Reconciling payment status for case: ${caseData.id}`);
+      caseData = updateCasePaymentStatus(caseData.id, {
+        paymentStatus: 'paid',
+        paidAt: new Date().toISOString(),
       });
     }
 

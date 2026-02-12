@@ -46,5 +46,1620 @@
       }
     },
     "createdAt": "2026-01-11T03:17:15.349Z"
+  },
+  "e3bb2b04-cccd-4d5d-b657-42fa6cb75413": {
+    "id": "e3bb2b04-cccd-4d5d-b657-42fa6cb75413",
+    "intake": {
+      "jurisdiction": "TX",
+      "tenant_information": {
+        "full_name": "Tom Platz",
+        "email": "sdfdsf@dsfds.hh",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "sadsa",
+        "landlord_address": "1753 Bonaventure",
+        "landlord_city": "Burbank",
+        "landlord_state": "TX",
+        "landlord_zip": "90078"
+      },
+      "property_information": {
+        "property_address": "1753 Bonaventure",
+        "city": "Burbank",
+        "zip_code": "90078",
+        "county": "aa"
+      },
+      "lease_information": {
+        "lease_start_date": "2025-01-01",
+        "lease_end_date": "2026-01-01",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-01",
+        "forwarding_address_provided": "no",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      }
+    },
+    "createdAt": "2026-01-31T22:33:08.845Z",
+    "paymentStatus": "pending",
+    "stripeSessionId": null,
+    "paidAt": null,
+    "amount": 1999
+  },
+  "551c2591-4f6b-45a0-9c61-5513b0c496d2": {
+    "id": "551c2591-4f6b-45a0-9c61-5513b0c496d2",
+    "intake": {
+      "jurisdiction": "TX",
+      "tenant_information": {
+        "full_name": "Tom Platz",
+        "email": "adsasd@dssd.cc",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "asddsf",
+        "landlord_address": "1753 Bonaventure",
+        "landlord_city": "Burbank",
+        "landlord_state": "TX",
+        "landlord_zip": "90078"
+      },
+      "property_information": {
+        "property_address": "1753 Bonaventure",
+        "city": "Burbank",
+        "zip_code": "90078",
+        "county": "sdfdsf"
+      },
+      "lease_information": {
+        "lease_start_date": "2026-01-01",
+        "lease_end_date": "2026-01-21",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-21",
+        "forwarding_address_provided": "no",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": [
+          "email"
+        ]
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      }
+    },
+    "createdAt": "2026-01-31T22:57:59.294Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1a2KYocgqi2l2HEeCBLzExYKIYRWQLp5uoj8yM5N9zSFUXvwAQ6MEriON",
+    "paidAt": "2026-01-31T22:59:38.348Z",
+    "amount": 1999
+  },
+  "3eec2239-971f-4365-b6a5-7728cff29018": {
+    "id": "3eec2239-971f-4365-b6a5-7728cff29018",
+    "intake": {
+      "jurisdiction": "TX",
+      "tenant_information": {
+        "full_name": "Tom Platz",
+        "email": "sdfd@dsfdsf.cc",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "sdfds",
+        "landlord_address": "1753 Bonaventure",
+        "landlord_city": "Burbank",
+        "landlord_state": "TX",
+        "landlord_zip": "90078"
+      },
+      "property_information": {
+        "property_address": "1753 Bonaventure",
+        "city": "Burbank",
+        "zip_code": "90078",
+        "county": "sadf"
+      },
+      "lease_information": {
+        "lease_start_date": "2026-01-01",
+        "lease_end_date": "2026-01-28",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-16",
+        "forwarding_address_provided": "no",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": [
+          "email"
+        ]
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      }
+    },
+    "createdAt": "2026-01-31T23:07:33.462Z",
+    "paymentStatus": "pending",
+    "stripeSessionId": "cs_test_a1Dw4X2vOdwR8rEZnbTPcTRB3jFzlB952261kcWOFteHqGWHvqlpJkAoU7",
+    "paidAt": null,
+    "amount": 1999
+  },
+  "4ec9805a-449b-49f5-9d60-e1a839f06962": {
+    "id": "4ec9805a-449b-49f5-9d60-e1a839f06962",
+    "intake": {
+      "jurisdiction": "TX",
+      "tenant_information": {
+        "full_name": "Tom Platz",
+        "email": "dfgdfg@dfgfdg.ll",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "ddfgdf",
+        "landlord_address": "1753 Bonaventure",
+        "landlord_city": "Burbank",
+        "landlord_state": "TX",
+        "landlord_zip": "90078"
+      },
+      "property_information": {
+        "property_address": "1753 Bonaventure",
+        "city": "Burbank",
+        "zip_code": "90078",
+        "county": "dfgdf"
+      },
+      "lease_information": {
+        "lease_start_date": "2026-01-01",
+        "lease_end_date": "2026-01-29",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-07",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": [
+          "email"
+        ]
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      }
+    },
+    "createdAt": "2026-01-31T23:12:07.385Z",
+    "paymentStatus": "pending",
+    "stripeSessionId": "cs_test_a1GANyLLILOfjkQqWzPyBpHXPEyu9zMmNTfuoshYEoBrxog9xyerdc8kIw",
+    "paidAt": null,
+    "amount": 1999
+  },
+  "fcaa921f-45de-4e18-98d8-d10f958e7132": {
+    "id": "fcaa921f-45de-4e18-98d8-d10f958e7132",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asds asd",
+        "email": "asds@sdsd.xc",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "PROPERTY",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "",
+        "landlord_state": "TX",
+        "landlord_zip": "",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "000 sq ft Bedr",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2026-01-05",
+        "lease_end_date": "2026-01-20",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-02-05",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T00:37:03.528Z",
+    "paymentStatus": "pending",
+    "stripeSessionId": "cs_test_a1fKiNcTBIAaJG2Ke4rdZlEBqigAx1ONG8qce6WJonxifKkR4zgtXwmRP1",
+    "paidAt": null,
+    "amount": 1999
+  },
+  "ea1980c9-11ec-41b3-8d3e-cf10e39a6143": {
+    "id": "ea1980c9-11ec-41b3-8d3e-cf10e39a6143",
+    "intake": {
+      "tenant_information": {
+        "full_name": "sdfds",
+        "email": "sdfd@dsfdf.ll",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "",
+        "landlord_state": "TX",
+        "landlord_zip": "",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T01:05:37.275Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1CrJdLCXFxjgbF8NnFTXWGVkqzMNmvK5KLIpIiaOe5IRvN0E5kkvCmfZM",
+    "paidAt": "2026-02-01T01:06:36.664Z",
+    "amount": 1999
+  },
+  "518616f4-11b0-427b-bca9-647c2be72821": {
+    "id": "518616f4-11b0-427b-bca9-647c2be72821",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asd",
+        "email": "asd@sadc.xx",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "",
+        "landlord_state": "TX",
+        "landlord_zip": "",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-31",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T01:10:43.426Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1V1SsUUkWQgQO73uOEIIDmKz0S5isayl1vnZNgOTVzgYMFCJGnIHn7gsi",
+    "paidAt": "2026-02-01T01:11:36.753Z",
+    "amount": 1999
+  },
+  "1071e1e4-038e-4885-a2b8-63074aef28f5": {
+    "id": "1071e1e4-038e-4885-a2b8-63074aef28f5",
+    "intake": {
+      "tenant_information": {
+        "full_name": "sdf",
+        "email": "sdf@dfd.gff",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "",
+        "landlord_state": "TX",
+        "landlord_zip": "",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-01-21",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T02:41:28.347Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1CFwrVEfiSXGzDT5o2NYsigGIlbQppnYyfMxGx5wdF0caQ9s9HGwZTXv1",
+    "paidAt": "2026-02-01T02:42:14.827Z",
+    "amount": 1999
+  },
+  "2acc46bc-d4c4-43ae-98f7-5c01a54ae797": {
+    "id": "2acc46bc-d4c4-43ae-98f7-5c01a54ae797",
+    "intake": {
+      "tenant_information": {
+        "full_name": "fdsf",
+        "email": "sdf@dfdf.fgf",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "xcxc",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "xcxc",
+        "landlord_state": "TX",
+        "landlord_zip": "34343",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-02-26",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T12:40:46.972Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1txIRsEcurjsthSLIt8Z0Sp85RjCXOFrT8SoBilz75nSixoFjvFA0QCu2",
+    "paidAt": "2026-02-01T12:42:20.316Z",
+    "amount": 1999
+  },
+  "06156e63-5ff0-4e94-ae42-c27188fd81a8": {
+    "id": "06156e63-5ff0-4e94-ae42-c27188fd81a8",
+    "intake": {
+      "tenant_information": {
+        "full_name": "df",
+        "email": "sdf@fdfd.ll",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "sdfsdf",
+        "landlord_state": "TX",
+        "landlord_zip": "32323",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-02-27",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-01T13:27:08.266Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1RYzcziAC7yvDLgNRXk3uzBtYaZQaBhYUOB0mc4I6i1GTy8QvUpHZNJoI",
+    "paidAt": "2026-02-01T13:27:23.492Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": "06156e63-5ff0-4e94-ae42-c27188fd81a8",
+        "generated_at": "2026-02-01T13:27:26.691Z",
+        "schema_version": "1.0.0",
+        "jurisdiction": "TX"
+      },
+      "timeline": {
+        "key_dates": {
+          "lease_start_date": "2024-01-01",
+          "lease_end_date": "2024-12-31",
+          "move_out_date": "2026-02-27",
+          "forwarding_address_date": null,
+          "itemized_list_received_date": null
+        },
+        "computed_deadlines": [
+          {
+            "deadline_id": "30_day_refund_deadline",
+            "label": "General 30-day timeline reference (from move-out)",
+            "date": "2026-03-28",
+            "reference": "Tex. Prop. Code § 92.103",
+            "computation_basis": "move_out_date + 30 days",
+            "days_remaining": 55,
+            "has_passed": false
+          }
+        ],
+        "current_status": {
+          "days_since_move_out": -26,
+          "timeline_phase": "within_30_days",
+          "summary_text": "Based on the dates provided, the case is within the general 30-day timeline commonly referenced in Texas (-26 days since move-out)."
+        }
+      },
+      "compliance_checklist": {
+        "items": [
+          {
+            "item_id": "deposit_returned",
+            "label": "Security deposit returned",
+            "status": "no",
+            "basis": "Tenant indicated the security deposit was not returned.",
+            "reference": "Tex. Prop. Code § 92.103(a)",
+            "relevance": "high"
+          },
+          {
+            "item_id": "itemized_list_provided",
+            "label": "Itemized list of deductions provided",
+            "status": "unknown",
+            "basis": "Tenant indicated uncertainty about whether an itemized list was received.",
+            "reference": "Tex. Prop. Code § 92.104(b)",
+            "relevance": "high"
+          },
+          {
+            "item_id": "forwarding_address_received",
+            "label": "Tenant provided forwarding address",
+            "status": "unknown",
+            "basis": "Tenant indicated uncertainty about whether a forwarding address was provided.",
+            "reference": "Tex. Prop. Code § 92.107",
+            "relevance": "medium"
+          },
+          {
+            "item_id": "refund_within_30_days",
+            "label": "Refund or itemization within 30 days",
+            "status": "unknown",
+            "basis": "-26 days have passed since move-out. The 30-day period has not yet passed.",
+            "reference": "Tex. Prop. Code § 92.103(a)",
+            "relevance": "high"
+          }
+        ],
+        "summary": {
+          "total_items": 4,
+          "yes_count": 0,
+          "no_count": 1,
+          "partial_count": 0,
+          "unknown_count": 3,
+          "summary_text": "Based on the information provided, 1 of 4 items are marked as 'no' or 'partial'."
+        }
+      },
+      "leverage_points": [
+        {
+          "rank": 1,
+          "point_id": "no_issues_detected",
+          "title": "No specific issues identified",
+          "observation": "Based on the information provided, no specific issues were identified. This may indicate the deposit was returned, the timeline has not passed, or additional information is needed.",
+          "why_this_matters": null,
+          "supporting_facts": [],
+          "statute_citations": [],
+          "lease_citations": "none_found",
+          "recommended_steps": [],
+          "severity": "low"
+        }
+      ],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.101",
+          "title": "Security Deposit",
+          "summary": "Defines what constitutes a security deposit under Texas law.",
+          "relevance_to_case": "Referenced as the foundational definition of security deposits in Texas.",
+          "url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.101"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "title": "Obligation to Refund",
+          "summary": "Establishes the 30-day timeline for returning deposits or providing itemization.",
+          "relevance_to_case": "Referenced because the tenant's situation involves security deposit timeline questions.",
+          "url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.103"
+        }
+      ],
+      "lease_clause_citations": [
+        {
+          "item_id": "no_lease_uploaded",
+          "topic": "other",
+          "excerpt": "[No lease document uploaded]",
+          "source_context": "N/A",
+          "relevance_note": "Lease document was not provided. Lease clause citations cannot be generated.",
+          "potential_conflict": null
+        }
+      ],
+      "procedural_steps": [],
+      "evidence_checklist": {
+        "categories": [
+          {
+            "category_id": "lease_documents",
+            "label": "Lease Documents",
+            "items": [
+              {
+                "item_id": "signed_lease",
+                "label": "Signed lease agreement",
+                "status": "provided",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "lease_amendments",
+                "label": "Lease amendments or addenda",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              },
+              {
+                "item_id": "move_in_inspection",
+                "label": "Move-in inspection report",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              }
+            ]
+          },
+          {
+            "category_id": "financial_records",
+            "label": "Financial Records",
+            "items": [
+              {
+                "item_id": "deposit_receipt",
+                "label": "Security deposit payment receipt",
+                "status": "not_provided",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "bank_records",
+                "label": "Bank records showing deposit payment",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              },
+              {
+                "item_id": "rent_payment_history",
+                "label": "Rent payment history",
+                "status": "unknown",
+                "importance": "low",
+                "notes": null
+              }
+            ]
+          },
+          {
+            "category_id": "move_out_documentation",
+            "label": "Move-Out Documentation",
+            "items": [
+              {
+                "item_id": "move_out_inspection",
+                "label": "Move-out inspection report",
+                "status": "unknown",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "key_return_receipt",
+                "label": "Key return receipt or documentation",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              },
+              {
+                "item_id": "forwarding_address_proof",
+                "label": "Proof of forwarding address delivery",
+                "status": "not_provided",
+                "importance": "high",
+                "notes": null
+              }
+            ]
+          },
+          {
+            "category_id": "communication_records",
+            "label": "Communication Records",
+            "items": [
+              {
+                "item_id": "emails",
+                "label": "Email correspondence with landlord",
+                "status": "unknown",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "text_messages",
+                "label": "Text message records",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              },
+              {
+                "item_id": "certified_mail",
+                "label": "Certified mail receipts",
+                "status": "unknown",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "itemized_list",
+                "label": "Itemized deduction list from landlord",
+                "status": "unknown",
+                "importance": "high",
+                "notes": null
+              }
+            ]
+          },
+          {
+            "category_id": "property_condition",
+            "label": "Property Condition Evidence",
+            "items": [
+              {
+                "item_id": "move_out_photos",
+                "label": "Photos of property at move-out",
+                "status": "unknown",
+                "importance": "high",
+                "notes": null
+              },
+              {
+                "item_id": "move_out_video",
+                "label": "Video walkthrough at move-out",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              },
+              {
+                "item_id": "move_in_photos",
+                "label": "Photos of property at move-in (for comparison)",
+                "status": "unknown",
+                "importance": "medium",
+                "notes": null
+              }
+            ]
+          }
+        ],
+        "summary": {
+          "provided_count": 1,
+          "not_provided_count": 2,
+          "high_importance_missing": [
+            "Security deposit payment receipt",
+            "Move-out inspection report",
+            "Proof of forwarding address delivery",
+            "Email correspondence with landlord",
+            "Certified mail receipts",
+            "Itemized deduction list from landlord",
+            "Photos of property at move-out"
+          ]
+        }
+      },
+      "letter_generator_inputs": {
+        "tenant": {
+          "full_name": "df",
+          "email": "sdf@fdfd.ll",
+          "phone": null,
+          "forwarding_address": null
+        },
+        "landlord": {
+          "name": null,
+          "address": "1753 Bonaventure________________________________ City",
+          "city_state_zip": "sdfsdf, TX, 32323",
+          "email": null,
+          "phone": null
+        },
+        "property": {
+          "address": "[MISSING: property_address]",
+          "city": "Mckinney",
+          "state": "TX",
+          "zip_code": "75070",
+          "county": null
+        },
+        "facts": {
+          "deposit_amount": "$1,000.00",
+          "move_out_date": "2026-02-27",
+          "forwarding_address_provided": "unknown",
+          "forwarding_address_date": null,
+          "deposit_returned": "no",
+          "amount_returned": null,
+          "itemized_list_received": "unknown",
+          "days_since_move_out": -26
+        },
+        "timeline_summary": "The tenant states that they moved out on 2026-02-27.",
+        "document_references": [
+          {
+            "type": "statutory",
+            "reference": "Tex. Prop. Code § 92.103",
+            "context": "According to publicly available Texas guidance, this section addresses the timeline for security deposit refunds."
+          },
+          {
+            "type": "statutory",
+            "reference": "Tex. Prop. Code § 92.104",
+            "context": "This section addresses permissible deductions from security deposits."
+          }
+        ],
+        "letter_type": "informational_summary"
+      },
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only. It does not constitute legal advice. This service is not a law firm and does not create an attorney-client relationship. No outcome is guaranteed. You may wish to consult a licensed Texas attorney regarding your specific circumstances.",
+        "sections": [
+          {
+            "section": "compliance_checklist",
+            "disclaimer": "These determinations are based solely on information provided by the user and do not constitute legal findings."
+          },
+          {
+            "section": "leverage_points",
+            "disclaimer": "These observations are informational only and do not predict legal outcomes."
+          },
+          {
+            "section": "statutory_references",
+            "disclaimer": "Statutory summaries are provided for general awareness only and do not constitute legal interpretation."
+          },
+          {
+            "section": "procedural_steps",
+            "disclaimer": "These steps are informational. A licensed Texas attorney can provide advice specific to individual circumstances."
+          }
+        ]
+      }
+    },
+    "analysisGeneratedAt": "2026-02-01T13:27:26.692Z"
+  },
+  "2fe61d16-8a8e-4ff6-9493-9bda30120ee7": {
+    "id": "2fe61d16-8a8e-4ff6-9493-9bda30120ee7",
+    "intake": {
+      "tenant_information": {
+        "full_name": "adasd",
+        "email": "duffguitar5@gmail.com",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "burbank",
+        "landlord_state": "TX",
+        "landlord_zip": "75070",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2026-02-02",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T01:33:37.345Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1e1AwNC3kHze6pYdE1PyvwR6uSkiFhuxoNaFSdvYnPOPPMeyMlXSwfbaK",
+    "paidAt": "2026-02-07T01:33:55.602Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T01:35:34.734Z"
+      },
+      "timeline": {
+        "move_out_date": "2026-02-02",
+        "days_since_move_out": 5,
+        "past_30_days": false
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T01:35:34.734Z"
+  },
+  "7f411fa3-8620-49b4-886c-2095fc3bccb2": {
+    "id": "7f411fa3-8620-49b4-886c-2095fc3bccb2",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asdsa",
+        "email": "duffguitar5@gmail.com",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "dfsf",
+        "landlord_state": "TX",
+        "landlord_zip": "34343",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-30",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T01:37:49.108Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1dI5eJptZsJcc51a3Xu1jIfdvFI0mMsBzdggF4biiLQa4jPAOUtxlpSBP",
+    "paidAt": "2026-02-07T01:38:00.922Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T01:39:31.084Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-30",
+        "days_since_move_out": 39,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T01:39:31.084Z"
+  },
+  "eec96d2e-67f8-4806-8129-bd3e073ba45a": {
+    "id": "eec96d2e-67f8-4806-8129-bd3e073ba45a",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asd",
+        "email": "asd@sdsd.jj",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "sdfdsf",
+        "landlord_state": "TX",
+        "landlord_zip": "43434",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-30",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T01:42:45.914Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a15b5u8LYH4rMhSZYLwfD8UCcdgSDoiXrt3DMFjFhzKC6FWv4LECv0zrWf",
+    "paidAt": "2026-02-07T01:42:57.397Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T01:53:02.415Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-30",
+        "days_since_move_out": 39,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T01:53:02.415Z"
+  },
+  "a3f4127a-2911-4519-acdb-90cb2d041e98": {
+    "id": "a3f4127a-2911-4519-acdb-90cb2d041e98",
+    "intake": {
+      "tenant_information": {
+        "full_name": "afdf",
+        "email": "sdfdfs@sadsd.ss",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "dfsdf",
+        "landlord_state": "TX",
+        "landlord_zip": "32323",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-26",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T01:55:55.221Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1R25Dju7UVHaZgqFymEZxZIHuVdxA8A8DeapLiKru1zn6wicjV3NTZmg0",
+    "paidAt": "2026-02-07T01:56:05.987Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T02:02:08.350Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-26",
+        "days_since_move_out": 43,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T02:02:08.350Z"
+  },
+  "adf443ab-1bc6-46c7-af59-838fafaf5a7d": {
+    "id": "adf443ab-1bc6-46c7-af59-838fafaf5a7d",
+    "intake": {
+      "tenant_information": {
+        "full_name": "aasd",
+        "email": "asd@sd.kk",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "sad",
+        "landlord_state": "TX",
+        "landlord_zip": "23232",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-29",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T02:06:20.348Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a191VWVsxjboKdbRbXKN1UdkyKVkUVrkBom95jvea7tp4dHBnEQccna4l9",
+    "paidAt": "2026-02-07T02:06:31.701Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T02:14:06.313Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-29",
+        "days_since_move_out": 40,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T02:14:06.313Z"
+  },
+  "650adbab-c322-40e6-bcf5-ac222deadd22": {
+    "id": "650adbab-c322-40e6-bcf5-ac222deadd22",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asdasd",
+        "email": "asdsad@sddsf.ll",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "adasda",
+        "landlord_state": "TX",
+        "landlord_zip": "34343",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-22",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T02:16:50.924Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1RifoYdk1BORqZKCtGr6dFXjCIw2DriTHtpB6Hr36lpnKmzOTtqmuSrG6",
+    "paidAt": "2026-02-07T02:16:59.750Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T02:20:17.611Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-22",
+        "days_since_move_out": 47,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T02:20:17.611Z"
+  },
+  "09033bd4-8a3e-4ea9-99f8-ef446f303f5f": {
+    "id": "09033bd4-8a3e-4ea9-99f8-ef446f303f5f",
+    "intake": {
+      "tenant_information": {
+        "full_name": "asdas",
+        "email": "asdsa@sdsd.ll",
+        "phone": ""
+      },
+      "landlord_information": {
+        "landlord_name": "",
+        "landlord_address": "1753 Bonaventure________________________________ City",
+        "landlord_city": "asdsad",
+        "landlord_state": "TX",
+        "landlord_zip": "23232",
+        "landlord_phone": ""
+      },
+      "property_information": {
+        "property_address": "",
+        "city": "Mckinney",
+        "zip_code": "75070",
+        "county": ""
+      },
+      "lease_information": {
+        "lease_start_date": "2024-01-01",
+        "lease_end_date": "2024-12-31",
+        "lease_type": "written"
+      },
+      "move_out_information": {
+        "move_out_date": "2025-12-24",
+        "forwarding_address_provided": "unknown",
+        "forwarding_address_date": ""
+      },
+      "security_deposit_information": {
+        "deposit_amount": "$1,000.00",
+        "deposit_paid_date": "",
+        "deposit_returned": "no",
+        "amount_returned": ""
+      },
+      "post_move_out_communications": {
+        "itemized_deductions_received": "unknown",
+        "date_itemized_list_received": "",
+        "communication_methods_used": []
+      },
+      "additional_notes": {
+        "tenant_notes": ""
+      },
+      "acknowledgements": {
+        "texas_only_confirmation": true,
+        "non_legal_service_acknowledged": true
+      },
+      "jurisdiction": "TX"
+    },
+    "createdAt": "2026-02-07T02:23:08.764Z",
+    "paymentStatus": "paid",
+    "stripeSessionId": "cs_test_a1UcKjQHS8LMRhttCshyMGyIgdaU9J0rF3asbKGwT7ItZdxpyTee3y2ix2",
+    "paidAt": "2026-02-07T02:23:17.150Z",
+    "amount": 1999,
+    "leaseText": null,
+    "leasePageMarkers": null,
+    "analysisReport": {
+      "report_metadata": {
+        "case_id": null,
+        "jurisdiction": "TX",
+        "generated_at": "2026-02-07T02:33:00.777Z"
+      },
+      "timeline": {
+        "move_out_date": "2025-12-24",
+        "days_since_move_out": 45,
+        "past_30_days": true
+      },
+      "compliance_checklist": {
+        "deposit_returned": false,
+        "itemization_provided": false,
+        "refund_within_30_days": false
+      },
+      "leverage_points": [],
+      "statutory_references": [
+        {
+          "citation": "Tex. Prop. Code § 92.103",
+          "topic": "Deposit refund deadline"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.104",
+          "topic": "Itemized deductions"
+        },
+        {
+          "citation": "Tex. Prop. Code § 92.109",
+          "topic": "Landlord liability"
+        }
+      ],
+      "lease_clause_citations": [],
+      "procedural_steps": [],
+      "disclaimers": {
+        "primary": "This report is provided for informational and document preparation purposes only and does not constitute legal advice."
+      }
+    },
+    "analysisGeneratedAt": "2026-02-07T02:33:00.777Z"
   }
 }

@@ -22,3 +22,8 @@ client/.env
 # Ignore real documents (keep folder)
 documents/*
 !documents/.gitkeep
+
+Claude working folder
+.claude/
+# Windows reserved device filename
+nul

@@ -1,0 +1,35 @@
+{
+  "case_id": "fixture-forwarding-missing",
+  "jurisdiction": "TX",
+
+  "tenant": {
+    "name": "Test Tenant",
+    "forwarding_address_provided": false,
+    "forwarding_address_date": null
+  },
+
+  "property": {
+    "address": "789 Example Blvd, Houston, TX 77002"
+  },
+
+  "deposit": {
+    "amount": 900,
+    "returned_amount": 0,
+    "return_date": null,
+    "itemized_deductions_provided": false
+  },
+
+  "tenancy": {
+    "move_out_date": "2024-08-01",
+    "surrender_date": "2024-08-01"
+  },
+
+  "lease": {
+    "text": "FORWARDING ADDRESS REQUIRED. Tenant must provide forwarding address in writing. SECURITY DEPOSIT. Refund subject to compliance with lease."
+  },
+
+  "correspondence": {
+    "landlord_letters": [],
+    "tenant_letters": []
+  }
+}

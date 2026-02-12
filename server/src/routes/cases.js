@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { validateIntake } = require('../lib/intakeValidation');
-const { saveCase, getCase } = require('../lib/caseStore');
+const { saveCase, getCase, updateCaseLeaseData } = require('../lib/caseStore');
 const {
   extractTextFromImage,
   extractTextFromPdf,
@@ -135,19 +135,24 @@ function extractStructuredData(text, sections) {
     }
   }
 
-  // Extract property address - look for street address patterns
+  // Extract property address - look for street address patterns (more flexible)
   const addressPatterns = [
-    /(?:property\s+address|premises|unit|apartment|residence)[:\s]+([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy)[^,.\n]*)/gi,
-    /(?:located\s+at|address)[:\s]+([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy)[^,.\n]*)/gi,
-    /\b([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy))\s*,\s*[A-Z][a-z]+\s*,\s*TX/gi,
+    // Standard labeled patterns
+    /(?:property\s*(?:address)?|premises|leased\s*premises|rental\s*property|the\s*property)[:\s]+([0-9]+[A-Za-z0-9\s#.,'/-]+?)(?:,\s*[A-Z][a-z]+|$|\n)/gi,
+    /(?:located\s+at|address\s*(?:is)?|residing\s+at)[:\s]+([0-9]+[A-Za-z0-9\s#.,'/-]+?)(?:,\s*[A-Z][a-z]+|$|\n)/gi,
+    // Street address with common suffixes
+    /\b([0-9]+\s+[A-Za-z0-9\s#.'-]+?(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy|Terrace|Ter|Trail|Trl)\.?\s*(?:#?\s*\d+)?)/gi,
+    // Any address starting with numbers followed by words before a comma
+    /\b([0-9]+\s+[A-Za-z][A-Za-z\s]+?)\s*,\s*[A-Z][a-z]+\s*,?\s*(?:TX|Texas)/gi,
   ];
 
   for (const pattern of addressPatterns) {
+    pattern.lastIndex = 0;
     const match = pattern.exec(normalized);
     if (match && match[1]) {
       let addr = match[1].trim();
       // Clean up common artifacts
-      addr = addr.replace(/\s+/g, ' ').replace(/[,;]$/, '').trim();
+      addr = addr.replace(/\s+/g, ' ').replace(/[,;:]+$/, '').trim();
       if (addr.length > 5 && addr.length < 150 && /^\d/.test(addr)) {
         extracted.property_address = addr;
         break;
@@ -155,57 +160,105 @@ function extractStructuredData(text, sections) {
     }
   }
 
-  // Extract city, state, zip - look for standard address format
+  // Extract city, state, zip - look for standard address format (more flexible)
   const cityStateZipPatterns = [
-    /,\s*([A-Za-z\s]+),\s*TX\s*(\d{5})/gi,
-    /([A-Za-z\s]+),\s*Texas\s*(\d{5})/gi,
+    /,\s*([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+    /([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*TX\s*(\d{5})/gi,
   ];
 
   for (const pattern of cityStateZipPatterns) {
+    pattern.lastIndex = 0;
     const match = pattern.exec(normalized);
     if (match && match[1] && match[2]) {
-      extracted.city = match[1].trim();
-      extracted.zip_code = match[2].trim();
-      break;
-    }
-  }
-
-  // Extract lease dates - look for various date formats and contexts
-  const datePatterns = [
-    /(?:lease|term|rental)\s+(?:period|term)[:\s]+(?:from\s+)?([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
-    /(?:commence|begin|start)[:\s]+([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
-    /(?:effective|starting)\s+(?:date)?[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
-    /from[:\s]+([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})\s+(?:to|through)/gi,
-  ];
-
-  for (const pattern of datePatterns) {
-    pattern.lastIndex = 0; // Reset regex state
-    const match = pattern.exec(normalized);
-    if (match && match[1]) {
-      const parsedDate = normalizeDate(match[1]);
-      if (parsedDate && parsedDate.length === 10) { // Valid YYYY-MM-DD format
-        extracted.lease_start_date = parsedDate;
+      const city = match[1].trim();
+      // Avoid matching common non-city words
+      if (city.length >= 3 && !['the', 'and', 'for', 'that', 'this'].includes(city.toLowerCase())) {
+        extracted.city = city;
+        extracted.zip_code = match[2].trim();
         break;
       }
     }
+  }
+
+  // Extract lease dates - look for various date formats and contexts (more flexible)
+  // First, find ALL dates in the document
+  const allDatesPattern = /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/g;
+  const allWrittenDatesPattern = /\b([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})\b/g;
+
+  const allDates = [];
+  let dateMatch;
+  while ((dateMatch = allDatesPattern.exec(normalized)) !== null) {
+    const parsed = normalizeDate(dateMatch[1]);
+    if (parsed) allDates.push({ raw: dateMatch[1], parsed, index: dateMatch.index });
+  }
+  while ((dateMatch = allWrittenDatesPattern.exec(text)) !== null) {
+    const parsed = normalizeDate(dateMatch[1]);
+    if (parsed) allDates.push({ raw: dateMatch[1], parsed, index: dateMatch.index });
+  }
+
+  console.log('Found dates in lease:', allDates.map(d => d.raw));
+
+  // Try specific patterns first for start date
+  const startDatePatterns = [
+    /(?:lease|term|rental)\s*(?:period|term|begins?|commences?|start)[:\s]+(?:on\s+)?([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /(?:commence|begin|start)(?:s|ing)?[:\s]+(?:on\s+)?([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /(?:effective|starting)\s*(?:date)?[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /from[:\s]+([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})\s*(?:to|through|until|-)/gi,
+    /(?:commence|begin|start|effective|from)[:\s]+([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/gi,
+    /(?:lease|term)\s*(?:date|start)[:\s]+(\d{4}[\/\-]\d{2}[\/\-]\d{2})/gi,
+    // More flexible: "start date" followed by date anywhere
+    /start\s*date[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /begin(?:ning)?\s*date[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+  ];
+
+  for (const pattern of startDatePatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(normalized);
+    if (match && match[1]) {
+      const parsedDate = normalizeDate(match[1]);
+      if (parsedDate && parsedDate.length === 10) {
+        extracted.lease_start_date = parsedDate;
+        console.log('Matched start date:', match[1], '->', parsedDate);
+        break;
+      }
+    }
+  }
+
+  // If no start date found, use first date in document as fallback
+  if (!extracted.lease_start_date && allDates.length > 0) {
+    extracted.lease_start_date = allDates[0].parsed;
+    console.log('Using first date as start date:', allDates[0].raw);
   }
 
   const endDatePatterns = [
-    /(?:to|through|until|thru)[:\s]+([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
-    /(?:end|expir|terminat)[a-z]*[:\s]+([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
-    /(?:ending|expiring)\s+(?:on|date)?[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/gi,
+    /(?:to|through|until|thru|ending)[:\s]+(?:on\s+)?([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /(?:end|expir|terminat)[a-z]*[:\s]+(?:on\s+)?([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /(?:ending|expiring|expires?)\s*(?:on|date)?[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /(?:to|through|until|ending|expires?)[:\s]+([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/gi,
+    /(?:lease|term)\s*(?:end|expir)[a-z]*[:\s]+(\d{4}[\/\-]\d{2}[\/\-]\d{2})/gi,
+    // More flexible
+    /end\s*date[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
+    /expir(?:ation|es?)?\s*date[:\s]*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/gi,
   ];
 
   for (const pattern of endDatePatterns) {
-    pattern.lastIndex = 0; // Reset regex state
+    pattern.lastIndex = 0;
     const match = pattern.exec(normalized);
     if (match && match[1]) {
       const parsedDate = normalizeDate(match[1]);
-      if (parsedDate && parsedDate.length === 10) { // Valid YYYY-MM-DD format
+      if (parsedDate && parsedDate.length === 10) {
         extracted.lease_end_date = parsedDate;
+        console.log('Matched end date:', match[1], '->', parsedDate);
         break;
       }
     }
+  }
+
+  // If no end date found but we have multiple dates, use second date as fallback
+  if (!extracted.lease_end_date && allDates.length > 1) {
+    extracted.lease_end_date = allDates[1].parsed;
+    console.log('Using second date as end date:', allDates[1].raw);
   }
 
   // Extract tenant name - be very conservative to avoid false matches
@@ -230,12 +283,174 @@ function extractStructuredData(text, sections) {
     }
   }
 
+  // Extract landlord/property manager name
+  const landlordNamePatterns = [
+    /(?:landlord|lessor|owner|property\s*manager)[:\s]+([A-Z][A-Za-z\s.,'&-]+?)(?:\s*,|\s*\(|\s*whose|\s*located|\s*at|\s*address|$)/gi,
+    /(?:landlord|lessor|owner)[:\s]*["']?([A-Z][A-Za-z\s.,'&-]+?)["']?\s*(?:,|\(|and|whose)/gi,
+    /between\s+([A-Z][A-Za-z\s.,'&-]+?)\s*(?:,|\()?\s*(?:hereinafter|as|the)?\s*["']?(?:landlord|lessor|owner)/gi,
+    /([A-Z][A-Za-z\s.,'&-]+?)\s*(?:,\s*)?(?:hereinafter|referred\s+to\s+as)?\s*["']?(?:landlord|lessor|owner)["']?/gi,
+  ];
+
+  for (const pattern of landlordNamePatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(text);
+    if (match && match[1]) {
+      let name = match[1].trim();
+      // Clean up the name
+      name = name.replace(/[,;:]+$/, '').trim();
+      name = name.replace(/^["']+|["']+$/g, '').trim();
+
+      // Validation
+      const invalidWords = ['agrees', 'shall', 'must', 'will', 'tenant', 'lessee', 'this', 'the', 'agreement'];
+      const hasInvalidWord = invalidWords.some(word => name.toLowerCase() === word || name.toLowerCase().startsWith(word + ' '));
+
+      if (!hasInvalidWord && name.length >= 3 && name.length <= 100) {
+        extracted.landlord_name = name;
+        break;
+      }
+    }
+  }
+
+  // Extract landlord address - look for address near landlord mentions
+  const landlordAddressPatterns = [
+    /(?:landlord|lessor|owner|management)[^.]*?(?:address|located\s+at)[:\s]+([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy|Suite|Ste|Unit|#)[^,\n]*)/gi,
+    /(?:send|mail|notice)[^.]*?(?:landlord|lessor|owner)[^.]*?(?:to|at)[:\s]+([0-9]+\s+[A-Za-z0-9\s#.'-]+)/gi,
+    /(?:landlord|lessor|owner)[^.]*?([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl)[^,\n]*)/gi,
+  ];
+
+  for (const pattern of landlordAddressPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(normalized);
+    if (match && match[1]) {
+      let addr = match[1].trim();
+      addr = addr.replace(/\s+/g, ' ').replace(/[,;]$/, '').trim();
+      // Don't use the same address as the property
+      if (addr.length > 5 && addr.length < 150 && /^\d/.test(addr) && addr !== extracted.property_address) {
+        extracted.landlord_address = addr;
+        break;
+      }
+    }
+  }
+
+  // Extract landlord city/state/zip if we found a landlord address context
+  if (extracted.landlord_address) {
+    // Look for city, state, zip after landlord address mentions
+    const landlordCityZipPatterns = [
+      /(?:landlord|lessor|owner|management)[^.]*?,\s*([A-Za-z\s]+),\s*(?:TX|Texas)\s*(\d{5})/gi,
+    ];
+
+    for (const pattern of landlordCityZipPatterns) {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(normalized);
+      if (match && match[1] && match[2]) {
+        extracted.landlord_city = match[1].trim();
+        extracted.landlord_state = 'TX';
+        extracted.landlord_zip = match[2].trim();
+        break;
+      }
+    }
+  }
+
+  // Extract phone numbers - try to associate with landlord or tenant
+  const phonePatterns = [
+    /(?:landlord|lessor|owner|management)[^.]*?(?:phone|tel|telephone|contact)[:\s]*(\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/gi,
+    /(?:phone|tel|telephone)[:\s]*(\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})[^.]*?(?:landlord|lessor|owner)/gi,
+  ];
+
+  for (const pattern of phonePatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(normalized);
+    if (match && match[1]) {
+      const phone = match[1].replace(/[^\d]/g, '');
+      if (phone.length === 10) {
+        extracted.landlord_phone = match[1].trim();
+        break;
+      }
+    }
+  }
+
+  // Extract county if mentioned
+  const countyPatterns = [
+    /([A-Za-z]+)\s+county\s*,\s*(?:TX|Texas)/gi,
+    /county\s+of\s+([A-Za-z]+)\s*,\s*(?:TX|Texas)/gi,
+    /(?:located\s+in|situated\s+in)\s+([A-Za-z]+)\s+county/gi,
+  ];
+
+  for (const pattern of countyPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(normalized);
+    if (match && match[1]) {
+      const county = match[1].trim();
+      if (county.length >= 3 && county.length <= 30) {
+        extracted.county = county;
+        break;
+      }
+    }
+  }
+
+  // Extract email addresses
+  const emailPattern = /\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/gi;
+  const emails = [];
+  let emailMatch;
+  while ((emailMatch = emailPattern.exec(normalized)) !== null) {
+    if (!emails.includes(emailMatch[1].toLowerCase())) {
+      emails.push(emailMatch[1].toLowerCase());
+    }
+  }
+  // If we find emails, try to determine if any is landlord's
+  if (emails.length > 0) {
+    // Check if any email is near landlord mention
+    for (const email of emails) {
+      const landlordEmailPattern = new RegExp(`(?:landlord|lessor|owner|management)[^.]*?${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi');
+      if (landlordEmailPattern.test(normalized)) {
+        extracted.landlord_email = email;
+        break;
+      }
+    }
+  }
+
   return Object.keys(extracted).length > 0 ? extracted : null;
 }
 
 function normalizeDate(dateStr) {
-  // Convert MM/DD/YYYY or MM-DD-YYYY to YYYY-MM-DD format
-  const parts = dateStr.split(/[\/\-]/);
+  if (!dateStr) return null;
+
+  // Handle written month format: "January 1, 2024" or "Jan 1, 2024"
+  const monthNames = {
+    'january': '01', 'jan': '01',
+    'february': '02', 'feb': '02',
+    'march': '03', 'mar': '03',
+    'april': '04', 'apr': '04',
+    'may': '05',
+    'june': '06', 'jun': '06',
+    'july': '07', 'jul': '07',
+    'august': '08', 'aug': '08',
+    'september': '09', 'sep': '09', 'sept': '09',
+    'october': '10', 'oct': '10',
+    'november': '11', 'nov': '11',
+    'december': '12', 'dec': '12',
+  };
+
+  // Try written month format: "January 1, 2024"
+  const writtenMatch = dateStr.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
+  if (writtenMatch) {
+    const monthStr = writtenMatch[1].toLowerCase();
+    const month = monthNames[monthStr];
+    if (month) {
+      const day = writtenMatch[2].padStart(2, '0');
+      const year = writtenMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  // Handle ISO format: YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = dateStr.match(/(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  // Convert MM/DD/YYYY or MM-DD-YYYY or MM.DD.YYYY to YYYY-MM-DD format
+  const parts = dateStr.split(/[\/\-\.]/);
   if (parts.length === 3) {
     let [month, day, year] = parts;
 
@@ -243,7 +458,7 @@ function normalizeDate(dateStr) {
     if (year.length === 2) {
       const currentYear = new Date().getFullYear();
       const century = Math.floor(currentYear / 100) * 100;
-      year = century + parseInt(year);
+      year = String(century + parseInt(year));
     }
 
     month = month.padStart(2, '0');
@@ -251,7 +466,7 @@ function normalizeDate(dateStr) {
 
     return `${year}-${month}-${day}`;
   }
-  return dateStr;
+  return null;
 }
 
 function extractSections(text) {
@@ -456,6 +671,11 @@ router.post('/:caseId/lease', upload.single('lease'), async (req, res) => {
   const sections = extractSections(text);
   const preview = text ? text.slice(0, 600).trim() : '';
   const extractedData = extractStructuredData(text, sections);
+
+  // Store lease text for Case Analysis Report pipeline
+  if (text && text.trim().length > 0) {
+    updateCaseLeaseData(req.params.caseId, text, null);
+  }
 
   return res.json({
     status: 'ok',

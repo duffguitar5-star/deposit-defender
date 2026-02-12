@@ -1,0 +1,704 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://depositdefender.com/schemas/case-analysis-report.json",
+  "title": "Case Analysis Report",
+  "description": "Structured analysis output for Texas security deposit cases. This schema produces actionable guidance while maintaining strict non-legal service compliance.",
+  "type": "object",
+  "required": [
+    "report_metadata",
+    "timeline",
+    "compliance_checklist",
+    "leverage_points",
+    "statutory_references",
+    "lease_clause_citations",
+    "procedural_steps",
+    "evidence_checklist",
+    "letter_generator_inputs",
+    "disclaimers"
+  ],
+  "properties": {
+    "report_metadata": {
+      "type": "object",
+      "description": "Identification and versioning for the report.",
+      "required": ["case_id", "generated_at", "schema_version", "jurisdiction"],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier linking this report to the intake case."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of report generation."
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Semantic version of this schema for future compatibility."
+        },
+        "jurisdiction": {
+          "type": "string",
+          "const": "TX",
+          "description": "Hardcoded to Texas. This service does not support other states."
+        }
+      }
+    },
+
+    "timeline": {
+      "type": "object",
+      "description": "Computed dates and deadlines based on user-provided facts and publicly available Texas timelines.",
+      "required": ["key_dates", "computed_deadlines", "current_status"],
+      "properties": {
+        "key_dates": {
+          "type": "object",
+          "description": "User-provided dates normalized for analysis.",
+          "required": ["move_out_date"],
+          "properties": {
+            "lease_start_date": {
+              "type": ["string", "null"],
+              "format": "date",
+              "description": "Lease commencement date (YYYY-MM-DD)."
+            },
+            "lease_end_date": {
+              "type": ["string", "null"],
+              "format": "date",
+              "description": "Lease termination date (YYYY-MM-DD)."
+            },
+            "move_out_date": {
+              "type": "string",
+              "format": "date",
+              "description": "Actual move-out date provided by tenant (YYYY-MM-DD)."
+            },
+            "forwarding_address_date": {
+              "type": ["string", "null"],
+              "format": "date",
+              "description": "Date forwarding address was provided, if known."
+            },
+            "itemized_list_received_date": {
+              "type": ["string", "null"],
+              "format": "date",
+              "description": "Date itemized deduction list was received, if applicable."
+            }
+          }
+        },
+        "computed_deadlines": {
+          "type": "array",
+          "description": "Deadlines derived from key dates and publicly available Texas timelines.",
+          "items": {
+            "type": "object",
+            "required": ["deadline_id", "label", "date", "reference", "computation_basis"],
+            "properties": {
+              "deadline_id": {
+                "type": "string",
+                "enum": [
+                  "30_day_refund_deadline",
+                  "30_day_itemization_deadline",
+                  "forwarding_address_trigger"
+                ],
+                "description": "Machine-readable identifier for the deadline type."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable label using neutral, informational language.",
+                "examples": [
+                  "General 30-day timeline reference (from move-out)",
+                  "General 30-day timeline reference (from forwarding address)"
+                ]
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "Computed deadline date (YYYY-MM-DD)."
+              },
+              "reference": {
+                "type": "string",
+                "description": "Statutory or public reference for this timeline.",
+                "examples": ["Tex. Prop. Code § 92.103"]
+              },
+              "computation_basis": {
+                "type": "string",
+                "description": "Explains how the date was computed from user inputs.",
+                "examples": ["move_out_date + 30 days", "forwarding_address_date + 30 days"]
+              },
+              "days_remaining": {
+                "type": ["integer", "null"],
+                "description": "Days until deadline (negative if past). Null if deadline cannot be computed."
+              },
+              "has_passed": {
+                "type": "boolean",
+                "description": "True if the computed deadline is in the past."
+              }
+            }
+          }
+        },
+        "current_status": {
+          "type": "object",
+          "description": "Summary of where the case stands relative to timelines.",
+          "required": ["days_since_move_out", "timeline_phase"],
+          "properties": {
+            "days_since_move_out": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Calendar days elapsed since move-out."
+            },
+            "timeline_phase": {
+              "type": "string",
+              "enum": ["within_30_days", "past_30_days", "unknown"],
+              "description": "General phase relative to commonly referenced 30-day timeline."
+            },
+            "summary_text": {
+              "type": "string",
+              "description": "Neutral, informational summary of timeline status.",
+              "examples": [
+                "Based on the dates provided, the general 30-day timeline commonly referenced in Texas has passed.",
+                "Based on the dates provided, the case is within the general 30-day timeline commonly referenced in Texas."
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "compliance_checklist": {
+      "type": "object",
+      "description": "Factual checklist of landlord actions based on user-provided information. NOT a legal determination.",
+      "required": ["items", "summary"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "Individual compliance items derived from intake data.",
+          "items": {
+            "type": "object",
+            "required": ["item_id", "label", "status", "basis", "reference"],
+            "properties": {
+              "item_id": {
+                "type": "string",
+                "enum": [
+                  "deposit_returned",
+                  "itemized_list_provided",
+                  "itemization_within_30_days",
+                  "refund_within_30_days",
+                  "forwarding_address_received"
+                ],
+                "description": "Machine-readable identifier for the checklist item."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable description using informational language.",
+                "examples": [
+                  "Security deposit returned",
+                  "Itemized list of deductions provided",
+                  "Tenant states forwarding address was provided"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["yes", "no", "partial", "unknown", "not_applicable"],
+                "description": "Status based on user-provided information."
+              },
+              "basis": {
+                "type": "string",
+                "description": "Explains why this status was assigned, referencing user input.",
+                "examples": [
+                  "Tenant indicated deposit was not returned.",
+                  "Tenant indicated itemized deductions were received on 2024-02-15.",
+                  "Forwarding address date not provided; cannot determine timeline."
+                ]
+              },
+              "reference": {
+                "type": ["string", "null"],
+                "description": "Relevant Texas Property Code section, if applicable.",
+                "examples": ["Tex. Prop. Code § 92.103(a)"]
+              },
+              "relevance": {
+                "type": "string",
+                "enum": ["high", "medium", "low"],
+                "description": "How central this item is to the case based on publicly available guidance."
+              }
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "description": "Aggregate summary of checklist results.",
+          "required": ["total_items", "yes_count", "no_count", "unknown_count"],
+          "properties": {
+            "total_items": { "type": "integer", "minimum": 0 },
+            "yes_count": { "type": "integer", "minimum": 0 },
+            "no_count": { "type": "integer", "minimum": 0 },
+            "partial_count": { "type": "integer", "minimum": 0 },
+            "unknown_count": { "type": "integer", "minimum": 0 },
+            "summary_text": {
+              "type": "string",
+              "description": "Neutral summary of the checklist findings.",
+              "examples": [
+                "Based on the information provided, 2 of 4 items are marked as 'no' or 'partial'."
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "leverage_points": {
+      "type": "array",
+      "description": "Ranked factual observations that may be relevant to the tenant's situation. These are informational observations, NOT legal claims or advice.",
+      "items": {
+        "type": "object",
+        "required": ["rank", "point_id", "title", "observation", "supporting_facts", "statutory_context"],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Priority ranking (1 = most relevant based on available information)."
+          },
+          "point_id": {
+            "type": "string",
+            "description": "Machine-readable identifier for this leverage point type.",
+            "examples": [
+              "deadline_missed",
+              "no_itemization",
+              "partial_return_no_explanation",
+              "lease_clause_conflict"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Brief title for the observation.",
+            "examples": [
+              "Timeline observation",
+              "Itemization not received",
+              "Lease clause reference"
+            ]
+          },
+          "observation": {
+            "type": "string",
+            "description": "Neutral, factual statement of what was observed in the case data. Must use informational language only.",
+            "examples": [
+              "According to the dates provided, more than 30 days have passed since the stated move-out date without the tenant receiving a refund or itemized list.",
+              "The tenant states that no itemized deduction list was received."
+            ]
+          },
+          "supporting_facts": {
+            "type": "array",
+            "description": "Specific data points from intake that support this observation.",
+            "items": {
+              "type": "object",
+              "required": ["fact", "source"],
+              "properties": {
+                "fact": {
+                  "type": "string",
+                  "description": "The factual assertion.",
+                  "examples": ["Move-out date: 2024-01-15"]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": ["tenant_intake", "lease_extraction", "computed"],
+                  "description": "Where this fact originated."
+                }
+              }
+            }
+          },
+          "statutory_context": {
+            "type": ["string", "null"],
+            "description": "Reference to publicly available Texas guidance, if relevant.",
+            "examples": [
+              "Publicly available Texas guidance commonly references a 30-day timeline. See Tex. Prop. Code § 92.103."
+            ]
+          },
+          "lease_clause_link": {
+            "type": ["string", "null"],
+            "description": "Reference to lease_clause_citations item_id if a lease clause is relevant."
+          }
+        }
+      }
+    },
+
+    "statutory_references": {
+      "type": "array",
+      "description": "Texas Property Code sections relevant to security deposit matters. Provided for informational awareness only.",
+      "items": {
+        "type": "object",
+        "required": ["citation", "title", "summary", "relevance_to_case"],
+        "properties": {
+          "citation": {
+            "type": "string",
+            "description": "Full statutory citation.",
+            "examples": [
+              "Tex. Prop. Code § 92.101",
+              "Tex. Prop. Code § 92.103",
+              "Tex. Prop. Code § 92.109"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Section title or short description.",
+            "examples": [
+              "Security Deposit",
+              "Obligation to Refund",
+              "Liability of Landlord"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "description": "High-level, neutral summary of what the section addresses. Not a legal interpretation.",
+            "examples": [
+              "This section addresses the general timeline for return of security deposits and itemization of deductions."
+            ]
+          },
+          "relevance_to_case": {
+            "type": "string",
+            "description": "Why this section is referenced for this case, in informational terms.",
+            "examples": [
+              "Referenced because the tenant's situation involves a security deposit and timeline questions."
+            ]
+          },
+          "url": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "Link to official statute text, if available."
+          }
+        }
+      }
+    },
+
+    "lease_clause_citations": {
+      "type": "array",
+      "description": "Pinpoint excerpts from the uploaded lease document relevant to the security deposit matter.",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "topic", "excerpt", "source_context"],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "Unique identifier for this clause citation.",
+            "examples": ["lease_clause_001", "lease_clause_002"]
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "security_deposit",
+              "cleaning_requirements",
+              "damage_and_wear",
+              "move_out_obligations",
+              "notice_requirements",
+              "other"
+            ],
+            "description": "Category of the lease clause."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Verbatim text extracted from the lease document.",
+            "maxLength": 1000
+          },
+          "source_context": {
+            "type": "string",
+            "description": "Where in the lease this was found (page, section, or paragraph reference if available).",
+            "examples": ["Section 8 - Security Deposit", "Page 3, Paragraph 2"]
+          },
+          "relevance_note": {
+            "type": "string",
+            "description": "Neutral explanation of why this clause is included.",
+            "examples": [
+              "This clause describes the lease's stated terms regarding the security deposit.",
+              "This clause references cleaning expectations at move-out."
+            ]
+          },
+          "potential_conflict": {
+            "type": ["string", "null"],
+            "description": "If this clause appears to conflict with publicly available Texas guidance, note it here in neutral terms. Null if no apparent conflict.",
+            "examples": [
+              "This clause references a 60-day timeline. Publicly available Texas guidance commonly references 30 days."
+            ]
+          }
+        }
+      }
+    },
+
+    "procedural_steps": {
+      "type": "array",
+      "description": "Informational list of steps a tenant might consider. These are NOT recommendations or legal advice.",
+      "items": {
+        "type": "object",
+        "required": ["step_number", "title", "description", "category"],
+        "properties": {
+          "step_number": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Order of the step."
+          },
+          "title": {
+            "type": "string",
+            "description": "Brief title for the step.",
+            "examples": [
+              "Document gathering",
+              "Written communication",
+              "Consult a Texas attorney"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Informational description using neutral language. Must not use 'should', 'must', or directive language.",
+            "examples": [
+              "Some tenants choose to gather copies of their lease, move-out documentation, and communication records.",
+              "Some tenants choose to send written correspondence to their landlord documenting the facts of their situation.",
+              "A licensed Texas attorney can provide legal advice specific to individual circumstances."
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["documentation", "communication", "legal_consultation", "court_information"],
+            "description": "Category of the procedural step."
+          },
+          "resources": {
+            "type": "array",
+            "description": "Links to public resources, if any.",
+            "items": {
+              "type": "object",
+              "required": ["title", "url"],
+              "properties": {
+                "title": { "type": "string" },
+                "url": { "type": "string", "format": "uri" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "applicability_note": {
+            "type": ["string", "null"],
+            "description": "Note about when this step might be relevant based on case facts.",
+            "examples": [
+              "Relevant if the tenant has not yet communicated in writing with the landlord."
+            ]
+          }
+        }
+      }
+    },
+
+    "evidence_checklist": {
+      "type": "object",
+      "description": "Checklist of documents and evidence a tenant might consider gathering.",
+      "required": ["categories"],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category_id", "label", "items"],
+            "properties": {
+              "category_id": {
+                "type": "string",
+                "enum": [
+                  "lease_documents",
+                  "financial_records",
+                  "move_out_documentation",
+                  "communication_records",
+                  "property_condition"
+                ],
+                "description": "Category identifier."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable category name.",
+                "examples": ["Lease Documents", "Financial Records"]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["item_id", "label", "status", "importance"],
+                  "properties": {
+                    "item_id": {
+                      "type": "string",
+                      "description": "Unique identifier for this evidence item."
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "Description of the document or evidence.",
+                      "examples": [
+                        "Signed lease agreement",
+                        "Security deposit receipt",
+                        "Move-out inspection report",
+                        "Photos of property at move-out"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["provided", "not_provided", "unknown"],
+                      "description": "Whether this item has been provided in the intake."
+                    },
+                    "importance": {
+                      "type": "string",
+                      "enum": ["high", "medium", "low"],
+                      "description": "General importance based on publicly available guidance."
+                    },
+                    "notes": {
+                      "type": ["string", "null"],
+                      "description": "Additional context about this evidence item."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "provided_count": { "type": "integer", "minimum": 0 },
+            "not_provided_count": { "type": "integer", "minimum": 0 },
+            "high_importance_missing": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of high-importance items not yet provided."
+            }
+          }
+        }
+      }
+    },
+
+    "letter_generator_inputs": {
+      "type": "object",
+      "description": "Structured data prepared for input into an informational letter template. This enables generation of a factual, non-demand letter.",
+      "required": ["tenant", "landlord", "property", "facts", "timeline_summary", "document_references"],
+      "properties": {
+        "tenant": {
+          "type": "object",
+          "required": ["full_name"],
+          "properties": {
+            "full_name": { "type": "string" },
+            "email": { "type": ["string", "null"] },
+            "phone": { "type": ["string", "null"] },
+            "forwarding_address": { "type": ["string", "null"] }
+          }
+        },
+        "landlord": {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": ["string", "null"] },
+            "address": { "type": ["string", "null"] },
+            "city_state_zip": { "type": ["string", "null"] },
+            "email": { "type": ["string", "null"] },
+            "phone": { "type": ["string", "null"] }
+          }
+        },
+        "property": {
+          "type": "object",
+          "required": ["address"],
+          "properties": {
+            "address": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string", "const": "TX" },
+            "zip_code": { "type": "string" },
+            "county": { "type": ["string", "null"] }
+          }
+        },
+        "facts": {
+          "type": "object",
+          "description": "Key facts to be stated in the letter, all sourced from tenant input.",
+          "required": ["deposit_amount", "move_out_date"],
+          "properties": {
+            "deposit_amount": {
+              "type": "string",
+              "description": "Deposit amount as a formatted string (e.g., '$1,500.00')."
+            },
+            "move_out_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "forwarding_address_provided": {
+              "type": "string",
+              "enum": ["yes", "no", "unknown"]
+            },
+            "forwarding_address_date": {
+              "type": ["string", "null"],
+              "format": "date"
+            },
+            "deposit_returned": {
+              "type": "string",
+              "enum": ["yes", "no", "partial"]
+            },
+            "amount_returned": {
+              "type": ["string", "null"],
+              "description": "Amount returned if partial, as formatted string."
+            },
+            "itemized_list_received": {
+              "type": "string",
+              "enum": ["yes", "no", "unknown"]
+            },
+            "days_since_move_out": {
+              "type": "integer"
+            }
+          }
+        },
+        "timeline_summary": {
+          "type": "string",
+          "description": "Pre-formatted summary of relevant dates for inclusion in the letter.",
+          "examples": [
+            "The tenant states that they moved out on January 15, 2024. A forwarding address was provided on January 16, 2024."
+          ]
+        },
+        "document_references": {
+          "type": "array",
+          "description": "References to include in the letter for context.",
+          "items": {
+            "type": "object",
+            "required": ["type", "reference"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["statutory", "lease_clause"],
+                "description": "Type of reference."
+              },
+              "reference": {
+                "type": "string",
+                "description": "The citation or excerpt."
+              },
+              "context": {
+                "type": "string",
+                "description": "How to introduce this reference in the letter."
+              }
+            }
+          }
+        },
+        "letter_type": {
+          "type": "string",
+          "enum": ["informational_summary", "factual_record"],
+          "description": "The type of letter to generate. Both are non-demand, informational documents."
+        }
+      }
+    },
+
+    "disclaimers": {
+      "type": "object",
+      "description": "Required disclaimers that MUST accompany this report.",
+      "required": ["primary", "sections"],
+      "properties": {
+        "primary": {
+          "type": "string",
+          "description": "Primary disclaimer text that must appear prominently.",
+          "const": "This report is provided for informational and document preparation purposes only. It does not constitute legal advice. This service is not a law firm and does not create an attorney-client relationship. No outcome is guaranteed. You may wish to consult a licensed Texas attorney regarding your specific circumstances."
+        },
+        "sections": {
+          "type": "array",
+          "description": "Section-specific disclaimers.",
+          "items": {
+            "type": "object",
+            "required": ["section", "disclaimer"],
+            "properties": {
+              "section": {
+                "type": "string",
+                "description": "Which section this disclaimer applies to."
+              },
+              "disclaimer": {
+                "type": "string",
+                "description": "The disclaimer text."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

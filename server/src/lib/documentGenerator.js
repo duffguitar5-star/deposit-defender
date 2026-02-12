@@ -1,3 +1,13 @@
+/**
+ * @deprecated This module is deprecated as of v2.0.0
+ * Use CaseAnalysisService.js and reportPdfGenerator.js instead.
+ *
+ * This file generates the legacy "Security Deposit – Informational Summary"
+ * which has been replaced by the Case Analysis Report pipeline.
+ *
+ * DO NOT USE FOR NEW FEATURES.
+ */
+
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
