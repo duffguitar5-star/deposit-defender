@@ -747,6 +747,7 @@ function DownloadPage() {
   const [status, setStatus] = useState('loading');
   const [downloaded, setDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   const [showEmailOption, setShowEmailOption] = useState(false);
   const [email, setEmail] = useState('');
   const [isEmailing, setIsEmailing] = useState(false);
@@ -789,6 +790,9 @@ function DownloadPage() {
 
   const handleDownload = async () => {
     setIsDownloading(true);
+    setDownloadError('');
+    setDownloaded(false);
+
     try {
       const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}`, { credentials: 'include' });
 
@@ -798,7 +802,21 @@ function DownloadPage() {
       }
 
       if (!response.ok) {
-        alert('Unable to download document. Please try again.');
+        // Try to parse error response
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            setDownloadError(errorData.message);
+          } else if (errorData.code === 'OCR_TIMEOUT') {
+            setDownloadError('Document generation timed out. This can happen with complex files. Please try again.');
+          } else if (errorData.code === 'PDF_GENERATION_FAILED') {
+            setDownloadError('Unable to generate PDF. Please try again or contact support with your Case ID.');
+          } else {
+            setDownloadError('Unable to generate document. Please try again.');
+          }
+        } catch {
+          setDownloadError('Unable to generate document. Please try again.');
+        }
         setIsDownloading(false);
         return;
       }
@@ -813,9 +831,10 @@ function DownloadPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       setDownloaded(true);
+      setDownloadError('');
       setIsDownloading(false);
     } catch (error) {
-      alert('Unable to download document. Please try again.');
+      setDownloadError('Network error. Please check your connection and try again.');
       setIsDownloading(false);
     }
   };
@@ -823,6 +842,7 @@ function DownloadPage() {
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setEmailError('');
+    setEmailSent(false);
     setIsEmailing(true);
 
     try {
@@ -841,7 +861,16 @@ function DownloadPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setEmailError(data.message || 'Unable to send email. Please try again.');
+        // Parse specific error messages
+        if (data.code === 'INVALID_EMAIL') {
+          setEmailError('Please enter a valid email address.');
+        } else if (data.code === 'OCR_TIMEOUT') {
+          setEmailError('Document generation timed out. Please try again.');
+        } else if (data.message) {
+          setEmailError(data.message);
+        } else {
+          setEmailError('Unable to send email. Please try again.');
+        }
         setIsEmailing(false);
         return;
       }
@@ -850,7 +879,7 @@ function DownloadPage() {
       setIsEmailing(false);
       setEmail('');
     } catch (error) {
-      setEmailError('Unable to send email. Please try again.');
+      setEmailError('Network error. Please check your connection and try again.');
       setIsEmailing(false);
     }
   };
@@ -920,15 +949,50 @@ function DownloadPage() {
                 <button
                   onClick={handleDownload}
                   disabled={isDownloading}
-                  className="cta-primary w-full text-lg disabled:opacity-50"
+                  className="cta-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isDownloading ? 'Preparing...' : 'Download PDF'}
+                  {isDownloading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating your document...
+                    </span>
+                  ) : (
+                    downloadError ? 'Retry Download' : 'Download PDF'
+                  )}
                 </button>
 
-                {downloaded && (
-                  <p className="text-sm text-green-700 mt-4">
-                    ✓ Download started. Check your downloads folder.
+                {isDownloading && (
+                  <p className="text-xs text-slate-500 mt-3 text-center">
+                    This may take 30-60 seconds for complex documents...
                   </p>
+                )}
+
+                {downloaded && !downloadError && (
+                  <div className="bg-green-50 border border-green-200 rounded-md p-3 mt-4">
+                    <p className="text-sm text-green-700 flex items-center justify-center">
+                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Download started. Check your downloads folder.
+                    </p>
+                  </div>
+                )}
+
+                {downloadError && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-4 mt-4">
+                    <p className="text-sm text-red-800 mb-2">
+                      <strong>Error:</strong> {downloadError}
+                    </p>
+                    <button
+                      onClick={handleDownload}
+                      className="text-sm text-red-700 hover:text-red-900 underline font-medium"
+                    >
+                      Try again
+                    </button>
+                  </div>
                 )}
 
                 <div className="mt-6 pt-6 border-t border-slate-300">
@@ -955,17 +1019,44 @@ function DownloadPage() {
                       <button
                         type="submit"
                         disabled={isEmailing}
-                        className="cta-primary w-full disabled:opacity-50"
+                        className="cta-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isEmailing ? 'Sending...' : 'Send PDF via Email'}
+                        {isEmailing ? (
+                          <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Sending email...
+                          </span>
+                        ) : (
+                          'Send PDF via Email'
+                        )}
                       </button>
-                      {emailError && (
-                        <p className="text-sm text-red-600 mt-2">{emailError}</p>
-                      )}
-                      {emailSent && (
-                        <p className="text-sm text-green-700 mt-2">
-                          ✓ PDF sent! Check your inbox.
+
+                      {isEmailing && (
+                        <p className="text-xs text-slate-500 mt-2 text-center">
+                          Generating and sending your document...
                         </p>
+                      )}
+
+                      {emailError && (
+                        <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-3">
+                          <p className="text-sm text-red-800">
+                            <strong>Error:</strong> {emailError}
+                          </p>
+                        </div>
+                      )}
+
+                      {emailSent && (
+                        <div className="bg-green-50 border border-green-200 rounded-md p-3 mt-3">
+                          <p className="text-sm text-green-700 flex items-center justify-center">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            PDF sent! Check your inbox.
+                          </p>
+                        </div>
                       )}
                       <p className="text-xs text-slate-500 mt-2 text-left">
                         Your email address is used only to deliver this document and is not stored in our system.
