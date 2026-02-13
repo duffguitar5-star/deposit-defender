@@ -6,7 +6,7 @@
  */
 
 const express = require('express');
-const { getCase, updateCaseAnalysisReport } = require('../lib/caseStore');
+const { getCase, updateCaseAnalysisReport, getPdfDocument, savePdfDocument } = require('../lib/caseStore');
 const { buildCaseAnalysisReport, validateReport } = require('../lib/CaseAnalysisService');
 const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGenerator');
 const { requireCaseOwnership } = require('../middleware/sessionAuth');
@@ -34,21 +34,33 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
   }
 
   try {
-    // Build Case Analysis Report
-    const report = buildCaseAnalysisReport(storedCase);
+    // Check if PDF already exists (cache)
+    let pdfBuffer = await getPdfDocument(req.params.caseId);
 
-    // Validate report structure
-    const validation = validateReport(report);
-    if (!validation.valid) {
-      logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
-      // Continue anyway - validation is advisory
+    if (!pdfBuffer) {
+      // Build Case Analysis Report
+      const report = buildCaseAnalysisReport(storedCase);
+
+      // Validate report structure
+      const validation = validateReport(report);
+      if (!validation.valid) {
+        logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
+        // Continue anyway - validation is advisory
+      }
+
+      // Store the generated report
+      await updateCaseAnalysisReport(req.params.caseId, report);
+
+      // Generate PDF
+      pdfBuffer = await generateReportPdf(report);
+
+      // Cache PDF for future requests
+      await savePdfDocument(req.params.caseId, pdfBuffer);
+
+      logger.info('PDF generated and cached', { caseId: req.params.caseId });
+    } else {
+      logger.info('PDF served from cache', { caseId: req.params.caseId });
     }
-
-    // Store the generated report
-    await updateCaseAnalysisReport(req.params.caseId, report);
-
-    // Generate PDF
-    const pdfBuffer = await generateReportPdf(report);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -190,20 +202,28 @@ router.post('/:caseId/email', requireCaseOwnership, async (req, res) => {
   }
 
   try {
-    // Build Case Analysis Report
-    const report = buildCaseAnalysisReport(storedCase);
+    // Check if PDF already exists (cache)
+    let pdfBuffer = await getPdfDocument(req.params.caseId);
 
-    // Validate report structure
-    const validation = validateReport(report);
-    if (!validation.valid) {
-      logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
+    if (!pdfBuffer) {
+      // Build Case Analysis Report
+      const report = buildCaseAnalysisReport(storedCase);
+
+      // Validate report structure
+      const validation = validateReport(report);
+      if (!validation.valid) {
+        logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
+      }
+
+      // Store the generated report
+      await updateCaseAnalysisReport(req.params.caseId, report);
+
+      // Generate PDF
+      pdfBuffer = await generateReportPdf(report);
+
+      // Cache PDF
+      await savePdfDocument(req.params.caseId, pdfBuffer);
     }
-
-    // Store the generated report
-    await updateCaseAnalysisReport(req.params.caseId, report);
-
-    // Generate PDF
-    const pdfBuffer = await generateReportPdf(report);
 
     // Send email (email address used transiently, not stored)
     await sendPdfEmail(email, storedCase.id, pdfBuffer);

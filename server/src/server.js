@@ -9,6 +9,7 @@ const documentsRouter = require('./routes/documents');
 const { sessionMiddleware } = require('./middleware/sessionAuth');
 const { generalApiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./lib/logger');
+const { startCleanupInterval } = require('./lib/caseStore');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -136,10 +137,14 @@ app.use('/api/cases', casesRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/documents', documentsRouter);
 
+// Start cleanup interval for old cases (72-hour retention)
+startCleanupInterval();
+
 app.listen(port, () => {
   logger.info('DepositDefender API started', {
     port,
     environment: process.env.NODE_ENV || 'development',
     clientOrigin,
   });
+  logger.info('Case cleanup interval started', { retentionHours: 72 });
 });
