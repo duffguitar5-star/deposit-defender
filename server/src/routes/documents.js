@@ -12,6 +12,7 @@ const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGener
 const { requireCaseOwnership } = require('../middleware/sessionAuth');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
 const logger = require('../lib/logger');
+const { sendPdfEmail } = require('../lib/emailService');
 
 const router = express.Router();
 
@@ -155,6 +156,77 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
   } catch (error) {
     logger.error('Preview generation error', { caseId: req.params.caseId, error });
     return res.status(500).json(createErrorResponse(ERROR_CODES.REPORT_GENERATION_FAILED, 'Preview generation failed.'));
+  }
+});
+
+/**
+ * POST /:caseId/email
+ *
+ * Email Case Analysis Report PDF to provided email address
+ * Email address is used transiently and not stored
+ */
+router.post('/:caseId/email', requireCaseOwnership, async (req, res) => {
+  const storedCase = getCase(req.params.caseId);
+
+  if (!storedCase) {
+    return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
+  }
+
+  // Payment gate
+  if (storedCase.paymentStatus !== 'paid') {
+    return res.status(402).json(createErrorResponse(ERROR_CODES.PAYMENT_REQUIRED));
+  }
+
+  // Validate email address from request body
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_EMAIL, 'Email address is required'));
+  }
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_EMAIL));
+  }
+
+  try {
+    // Build Case Analysis Report
+    const report = buildCaseAnalysisReport(storedCase);
+
+    // Validate report structure
+    const validation = validateReport(report);
+    if (!validation.valid) {
+      logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
+    }
+
+    // Store the generated report
+    await updateCaseAnalysisReport(req.params.caseId, report);
+
+    // Generate PDF
+    const pdfBuffer = await generateReportPdf(report);
+
+    // Send email (email address used transiently, not stored)
+    await sendPdfEmail(email, storedCase.id, pdfBuffer);
+
+    logger.info('PDF emailed successfully', {
+      caseId: req.params.caseId,
+      emailSentTo: email, // Logged but not persisted
+    });
+
+    return res.json({
+      status: 'ok',
+      data: {
+        message: 'PDF sent to your email address',
+      },
+    });
+  } catch (error) {
+    logger.error('Email delivery error', { caseId: req.params.caseId, error });
+
+    // Check if it's a timeout error
+    const isTimeout = error.message && error.message.includes('timed out');
+    const errorCode = isTimeout ? ERROR_CODES.OCR_TIMEOUT : ERROR_CODES.PDF_GENERATION_FAILED;
+
+    return res.status(500).json(createErrorResponse(errorCode, 'Unable to send email. Please try again.'));
   }
 });
 

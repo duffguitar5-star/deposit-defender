@@ -747,6 +747,11 @@ function DownloadPage() {
   const [status, setStatus] = useState('loading');
   const [downloaded, setDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showEmailOption, setShowEmailOption] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isEmailing, setIsEmailing] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -812,6 +817,41 @@ function DownloadPage() {
     } catch (error) {
       alert('Unable to download document. Please try again.');
       setIsDownloading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    setEmailError('');
+    setIsEmailing(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/documents/${caseId}/email`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.status === 402) {
+        navigate(`/action-plan/${caseId}`);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setEmailError(data.message || 'Unable to send email. Please try again.');
+        setIsEmailing(false);
+        return;
+      }
+
+      setEmailSent(true);
+      setIsEmailing(false);
+      setEmail('');
+    } catch (error) {
+      setEmailError('Unable to send email. Please try again.');
+      setIsEmailing(false);
     }
   };
 
@@ -890,6 +930,49 @@ function DownloadPage() {
                     ✓ Download started. Check your downloads folder.
                   </p>
                 )}
+
+                <div className="mt-6 pt-6 border-t border-slate-300">
+                  <button
+                    onClick={() => setShowEmailOption(!showEmailOption)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {showEmailOption ? '− Cancel' : '+ Email me a copy'}
+                  </button>
+
+                  {showEmailOption && (
+                    <form onSubmit={handleEmailSubmit} className="mt-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-2 text-left">
+                        Email address (not stored):
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder="your@email.com"
+                        className="w-full rounded-md border-gray-300 shadow-sm mb-3"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isEmailing}
+                        className="cta-primary w-full disabled:opacity-50"
+                      >
+                        {isEmailing ? 'Sending...' : 'Send PDF via Email'}
+                      </button>
+                      {emailError && (
+                        <p className="text-sm text-red-600 mt-2">{emailError}</p>
+                      )}
+                      {emailSent && (
+                        <p className="text-sm text-green-700 mt-2">
+                          ✓ PDF sent! Check your inbox.
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-2 text-left">
+                        Your email address is used only to deliver this document and is not stored in our system.
+                      </p>
+                    </form>
+                  )}
+                </div>
               </div>
 
               <p className="text-xs text-slate-500 mt-6">
