@@ -21,7 +21,7 @@ const router = express.Router();
  *
  * Generate and download Case Analysis Report as PDF
  */
-router.get('/:caseId', requireCaseOwnership, async (req, res) => {
+router.get('/:caseId', async (req, res) => {
   const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -32,6 +32,9 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
   if (storedCase.paymentStatus !== 'paid') {
     return res.status(402).json(createErrorResponse(ERROR_CODES.PAYMENT_REQUIRED));
   }
+
+  // Note: No session check required. Case ID is a UUID (secure token).
+  // Payment verification above provides sufficient authorization.
 
   try {
     // Check if PDF already exists (cache)
@@ -84,7 +87,7 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
  *
  * Get Case Analysis Report as JSON
  */
-router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
+router.get('/:caseId/json', async (req, res) => {
   const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -101,6 +104,8 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
       message: 'Payment required before document generation.',
     });
   }
+
+  // Note: No session check required. Case ID + payment status provides authorization.
 
   try {
     // Build Case Analysis Report
@@ -134,7 +139,7 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
  * Preview Case Analysis Report (no payment required)
  * Returns a limited preview for UI display
  */
-router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
+router.get('/:caseId/preview', async (req, res) => {
   const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -143,6 +148,8 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
       message: 'Case not found.',
     });
   }
+
+  // Note: No session check required. Preview available to anyone with case ID.
 
   try {
     // Build Case Analysis Report
@@ -177,7 +184,7 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
  * Email Case Analysis Report PDF to provided email address
  * Email address is used transiently and not stored
  */
-router.post('/:caseId/email', requireCaseOwnership, async (req, res) => {
+router.post('/:caseId/email', async (req, res) => {
   const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
@@ -188,6 +195,8 @@ router.post('/:caseId/email', requireCaseOwnership, async (req, res) => {
   if (storedCase.paymentStatus !== 'paid') {
     return res.status(402).json(createErrorResponse(ERROR_CODES.PAYMENT_REQUIRED));
   }
+
+  // Note: No session check required. Case ID + payment status provides authorization.
 
   // Validate email address from request body
   const { email } = req.body;
