@@ -10,6 +10,7 @@ const { getCase, updateCaseAnalysisReport } = require('../lib/caseStore');
 const { buildCaseAnalysisReport, validateReport } = require('../lib/CaseAnalysisService');
 const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGenerator');
 const { requireCaseOwnership } = require('../middleware/sessionAuth');
+const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
 
 const router = express.Router();
 
@@ -22,18 +23,12 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
   const storedCase = getCase(req.params.caseId);
 
   if (!storedCase) {
-    return res.status(404).json({
-      status: 'not_found',
-      message: 'Case not found.',
-    });
+    return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
   }
 
   // Payment gate: Only allow document generation if payment is completed
   if (storedCase.paymentStatus !== 'paid') {
-    return res.status(402).json({
-      status: 'payment_required',
-      message: 'Payment required before document generation.',
-    });
+    return res.status(402).json(createErrorResponse(ERROR_CODES.PAYMENT_REQUIRED));
   }
 
   try {
@@ -61,10 +56,12 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
     return res.send(pdfBuffer);
   } catch (error) {
     console.error('Document generation error:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Document generation is temporarily unavailable. Please try again later.',
-    });
+
+    // Check if it's a timeout error
+    const isTimeout = error.message && error.message.includes('timed out');
+    const errorCode = isTimeout ? ERROR_CODES.OCR_TIMEOUT : ERROR_CODES.PDF_GENERATION_FAILED;
+
+    return res.status(500).json(createErrorResponse(errorCode));
   }
 });
 
@@ -113,10 +110,7 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
     });
   } catch (error) {
     console.error('Report generation error:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Report generation failed. Please try again later.',
-    });
+    return res.status(500).json(createErrorResponse(ERROR_CODES.REPORT_GENERATION_FAILED));
   }
 });
 
@@ -159,10 +153,7 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
     });
   } catch (error) {
     console.error('Preview generation error:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Preview generation failed.',
-    });
+    return res.status(500).json(createErrorResponse(ERROR_CODES.REPORT_GENERATION_FAILED, 'Preview generation failed.'));
   }
 });
 

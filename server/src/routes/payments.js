@@ -3,6 +3,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getCase, updateCasePaymentStatus, getCaseBySessionId } = require('../lib/caseStore');
 const { PRODUCT_PRICE, PRODUCT_NAME, PRODUCT_DESCRIPTION, CURRENCY } = require('../config/pricing');
 const { canAccessCase } = require('../middleware/sessionAuth');
+const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
 
 const router = express.Router();
 
@@ -21,19 +22,13 @@ router.post('/create-checkout-session', async (req, res) => {
 
     // Check session ownership
     if (!canAccessCase(req, caseId)) {
-      return res.status(403).json({
-        status: 'forbidden',
-        message: 'Access denied. This case does not belong to your session.',
-      });
+      return res.status(403).json(createErrorResponse(ERROR_CODES.ACCESS_DENIED));
     }
 
     const existingCase = getCase(caseId);
 
     if (!existingCase) {
-      return res.status(404).json({
-        status: 'not_found',
-        message: 'Case not found.',
-      });
+      return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
     }
 
     if (existingCase.paymentStatus === 'paid') {
@@ -98,10 +93,7 @@ router.post('/create-checkout-session', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating checkout session:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Unable to create checkout session.',
-    });
+    return res.status(500).json(createErrorResponse(ERROR_CODES.PAYMENT_PROCESSING_ERROR, 'Unable to create checkout session.'));
   }
 });
 
@@ -174,19 +166,13 @@ router.get('/verify/:sessionId', async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (!session) {
-      return res.status(404).json({
-        status: 'not_found',
-        message: 'Session not found.',
-      });
+      return res.status(404).json(createErrorResponse(ERROR_CODES.SESSION_NOT_FOUND));
     }
 
     let caseData = getCaseBySessionId(sessionId);
 
     if (!caseData) {
-      return res.status(404).json({
-        status: 'not_found',
-        message: 'Case not found for this session.',
-      });
+      return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND, 'Case not found for this session.'));
     }
 
     // P0 Reconciliation: If Stripe says paid but local is pending, update local
@@ -208,10 +194,7 @@ router.get('/verify/:sessionId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error verifying payment:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Unable to verify payment.',
-    });
+    return res.status(500).json(createErrorResponse(ERROR_CODES.PAYMENT_VERIFICATION_FAILED));
   }
 });
 
