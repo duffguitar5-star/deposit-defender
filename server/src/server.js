@@ -7,6 +7,8 @@ const casesRouter = require('./routes/cases');
 const paymentsRouter = require('./routes/payments');
 const documentsRouter = require('./routes/documents');
 const { sessionMiddleware } = require('./middleware/sessionAuth');
+const { generalApiLimiter } = require('./middleware/rateLimiter');
+const logger = require('./lib/logger');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -28,8 +30,106 @@ app.use(express.json({ limit: '2mb' }));
 // Session middleware for case ownership tracking
 app.use(sessionMiddleware);
 
+// Apply general rate limiting to all API routes
+app.use('/api', generalApiLimiter);
+
+// Comprehensive health check with diagnostics
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  const fs = require('fs');
+  const path = require('path');
+
+  const dataDir = path.join(__dirname, '..', 'data');
+  const dataFile = path.join(dataDir, 'cases.json');
+
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    services: {
+      datastore: 'unknown',
+      stripe: 'unknown',
+    },
+    system: {
+      memory: {
+        used: process.memoryUsage().heapUsed,
+        total: process.memoryUsage().heapTotal,
+        external: process.memoryUsage().external,
+      },
+      platform: process.platform,
+      nodeVersion: process.version,
+    },
+  };
+
+  // Check datastore accessibility
+  try {
+    if (fs.existsSync(dataFile)) {
+      const stats = fs.statSync(dataFile);
+      health.services.datastore = 'accessible';
+      health.services.datastoreSize = stats.size;
+    } else {
+      health.services.datastore = 'not_found';
+      health.status = 'degraded';
+    }
+  } catch (error) {
+    health.services.datastore = 'error';
+    health.status = 'degraded';
+  }
+
+  // Check Stripe API key configured
+  if (process.env.STRIPE_SECRET_KEY) {
+    health.services.stripe = 'configured';
+  } else {
+    health.services.stripe = 'not_configured';
+    health.status = 'degraded';
+  }
+
+  const statusCode = health.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(health);
+});
+
+// Simple liveness probe
+app.get('/api/health/live', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Readiness probe with dependency checks
+app.get('/api/health/ready', async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+
+  const dataDir = path.join(__dirname, '..', 'data');
+  const dataFile = path.join(dataDir, 'cases.json');
+
+  const ready = {
+    status: 'ready',
+    timestamp: new Date().toISOString(),
+    checks: {
+      datastore: false,
+      stripe: false,
+    },
+  };
+
+  // Check datastore
+  try {
+    if (fs.existsSync(dataFile)) {
+      // Try to read the file
+      fs.readFileSync(dataFile, 'utf8');
+      ready.checks.datastore = true;
+    }
+  } catch (error) {
+    ready.checks.datastore = false;
+  }
+
+  // Check Stripe configuration
+  ready.checks.stripe = !!process.env.STRIPE_SECRET_KEY;
+
+  // Overall ready status
+  const isReady = ready.checks.datastore && ready.checks.stripe;
+  ready.status = isReady ? 'ready' : 'not_ready';
+
+  const statusCode = isReady ? 200 : 503;
+  res.status(statusCode).json(ready);
 });
 
 app.use('/api/cases', casesRouter);
@@ -37,5 +137,9 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/documents', documentsRouter);
 
 app.listen(port, () => {
-  console.log(`DepositDefender API listening on port ${port}`);
+  logger.info('DepositDefender API started', {
+    port,
+    environment: process.env.NODE_ENV || 'development',
+    clientOrigin,
+  });
 });

@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
+const { fileUploadLimiter, caseCreationLimiter } = require('../middleware/rateLimiter');
+const logger = require('../lib/logger');
 const { validateIntake } = require('../lib/intakeValidation');
 const { saveCase, getCase, updateCaseLeaseData } = require('../lib/caseStore');
 const {
@@ -596,7 +598,7 @@ function extractSections(text) {
     };
   });
 }
-router.post('/', async (req, res) => {
+router.post('/', caseCreationLimiter, async (req, res) => {
   const payload = req.body;
   const { valid, errors } = validateIntake(payload);
 
@@ -612,9 +614,7 @@ router.post('/', async (req, res) => {
   // Associate case with current session for access control
   associateCaseWithSession(req, caseId);
 
-  console.log('Intake received', {
-    caseId,
-    receivedAt: new Date().toISOString(),
+  logger.logCaseOperation('Intake received', caseId, {
     jurisdiction: payload.jurisdiction,
     leaseType: payload.lease_information.lease_type,
     depositReturned: payload.security_deposit_information.deposit_returned,
@@ -647,7 +647,7 @@ router.get('/:caseId', requireCaseOwnership, (req, res) => {
   });
 });
 
-router.post('/lease-extract', upload.single('lease'), async (req, res) => {
+router.post('/lease-extract', fileUploadLimiter, upload.single('lease'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_FILE_TYPE, 'Lease file is required.'));
   }
@@ -678,9 +678,9 @@ router.post('/lease-extract', upload.single('lease'), async (req, res) => {
       }
     }
   } catch (error) {
-    console.error('Lease extraction failed', {
+    logger.error('Lease extraction failed', {
       route: '/api/cases/lease-extract',
-      message: error && error.message ? error.message : String(error),
+      error,
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
     });

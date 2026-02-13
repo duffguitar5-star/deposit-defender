@@ -11,6 +11,7 @@ const { buildCaseAnalysisReport, validateReport } = require('../lib/CaseAnalysis
 const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGenerator');
 const { requireCaseOwnership } = require('../middleware/sessionAuth');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
     // Validate report structure
     const validation = validateReport(report);
     if (!validation.valid) {
-      console.error('Report validation failed:', validation.errors);
+      logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
       // Continue anyway - validation is advisory
     }
 
@@ -55,7 +56,7 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
     );
     return res.send(pdfBuffer);
   } catch (error) {
-    console.error('Document generation error:', error);
+    logger.error('Document generation error', { caseId: req.params.caseId, error });
 
     // Check if it's a timeout error
     const isTimeout = error.message && error.message.includes('timed out');
@@ -95,7 +96,7 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
     // Validate report structure
     const validation = validateReport(report);
     if (!validation.valid) {
-      console.error('Report validation failed:', validation.errors);
+      logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
     }
 
     // Store the generated report
@@ -109,7 +110,7 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Report generation error:', error);
+    logger.error('Report generation error', { caseId: req.params.caseId, error });
     return res.status(500).json(createErrorResponse(ERROR_CODES.REPORT_GENERATION_FAILED));
   }
 });
@@ -152,7 +153,7 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Preview generation error:', error);
+    logger.error('Preview generation error', { caseId: req.params.caseId, error });
     return res.status(500).json(createErrorResponse(ERROR_CODES.REPORT_GENERATION_FAILED, 'Preview generation failed.'));
   }
 });

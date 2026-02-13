@@ -4,12 +4,14 @@ const { getCase, updateCasePaymentStatus, getCaseBySessionId } = require('../lib
 const { PRODUCT_PRICE, PRODUCT_NAME, PRODUCT_DESCRIPTION, CURRENCY } = require('../config/pricing');
 const { canAccessCase } = require('../middleware/sessionAuth');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
+const { paymentLimiter } = require('../middleware/rateLimiter');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
 
-router.post('/create-checkout-session', async (req, res) => {
+router.post('/create-checkout-session', paymentLimiter, async (req, res) => {
   try {
     const { caseId } = req.body;
 
@@ -55,7 +57,7 @@ router.post('/create-checkout-session', async (req, res) => {
         }
       } catch (error) {
         // Session not found or expired, create a new one
-        console.log('Previous session not found or expired, creating new one');
+        logger.info('Previous session not found or expired, creating new one', { caseId });
       }
     }
 
@@ -92,7 +94,7 @@ router.post('/create-checkout-session', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    logger.error('Error creating checkout session', { error });
     return res.status(500).json(createErrorResponse(ERROR_CODES.PAYMENT_PROCESSING_ERROR, 'Unable to create checkout session.'));
   }
 });
@@ -177,7 +179,10 @@ router.get('/verify/:sessionId', async (req, res) => {
 
     // P0 Reconciliation: If Stripe says paid but local is pending, update local
     if (session.payment_status === 'paid' && caseData.paymentStatus === 'pending') {
-      console.log(`Reconciling payment status for case: ${caseData.id}`);
+      logger.logPaymentOperation('Reconciling payment status', caseData.id, {
+        stripePaymentStatus: session.payment_status,
+        localPaymentStatus: 'pending',
+      });
       caseData = await updateCasePaymentStatus(caseData.id, {
         paymentStatus: 'paid',
         paidAt: new Date().toISOString(),
@@ -193,7 +198,7 @@ router.get('/verify/:sessionId', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error verifying payment:', error);
+    logger.error('Error verifying payment', { error });
     return res.status(500).json(createErrorResponse(ERROR_CODES.PAYMENT_VERIFICATION_FAILED));
   }
 });
