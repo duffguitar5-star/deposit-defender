@@ -845,9 +845,23 @@ function DownloadPage() {
               <h2 className="text-4xl font-bold text-slate-900 mb-4">
                 Your Document is Ready
               </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-4">
                 Your security deposit informational summary has been prepared.
               </p>
+              <div className="inline-flex items-center bg-slate-100 border border-slate-300 rounded-lg px-4 py-2">
+                <span className="text-xs font-medium text-slate-600 mr-2">Case ID:</span>
+                <code className="text-sm font-mono text-slate-900 select-all">{caseId}</code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(caseId);
+                    alert('Case ID copied to clipboard');
+                  }}
+                  className="ml-3 text-xs text-blue-600 hover:text-blue-800 underline"
+                  title="Copy Case ID"
+                >
+                  Copy
+                </button>
+              </div>
             </section>
 
             <section className="max-w-md mx-auto text-center">
@@ -856,8 +870,11 @@ function DownloadPage() {
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">
                   Security Deposit Summary
                 </h3>
-                <p className="text-sm text-slate-600 mb-6">
+                <p className="text-sm text-slate-600 mb-2">
                   PDF document with your lease information and timeline
+                </p>
+                <p className="text-xs text-slate-500 mb-6 font-mono">
+                  deposit-defender-{caseId.slice(0, 8)}.pdf
                 </p>
 
                 <button
