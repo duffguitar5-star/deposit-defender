@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const { parseISO, differenceInCalendarDays, addDays, format, isValid } = require('date-fns');
 const { utcToZonedTime } = require('date-fns-tz');
+const logger = require('./logger');
 
 // Load TX rules knowledge base
 const rulesPath = path.join(__dirname, '..', '..', '..', 'ai', 'tx_security_deposit_rules.json');
@@ -62,7 +63,7 @@ function calculateDeadlineDate(moveOutDate, daysToAdd) {
     // Format consistently
     return format(deadline, 'MMM d, yyyy');
   } catch (error) {
-    console.error('Date calculation error:', error);
+    logger.error('Date calculation error', { error, fromDate, daysToAdd });
     return 'unknown';
   }
 }
@@ -528,7 +529,7 @@ function detectIssues(intake, timeline, leaseClauses) {
         });
       }
     } catch (err) {
-      console.error(`Issue detector ${detector.id} failed:`, err.message);
+      logger.error('Issue detector failed', { detectorId: detector.id, error: err.message });
     }
   }
 

@@ -3,6 +3,7 @@
 const { indexLeaseClauses } = require("./leaseClauseIndexer");
 const { detectIssues } = require("./issueDetectors");
 const { parseISO, differenceInCalendarDays, isValid } = require('date-fns');
+const logger = require('./logger');
 
 /**
  * Core analysis orchestrator.
@@ -48,7 +49,7 @@ function buildCaseAnalysisReport(caseData) {
         past30Days = daysSinceMoveOut > 30;
       }
     } catch (error) {
-      console.error('Timeline calculation error:', error);
+      logger.error('Timeline calculation error', { error });
     }
   }
 

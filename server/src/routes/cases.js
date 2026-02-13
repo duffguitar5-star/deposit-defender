@@ -228,7 +228,7 @@ function extractStructuredData(text, sections) {
     if (parsed) allDates.push({ raw: dateMatch[1], parsed, index: dateMatch.index });
   }
 
-  console.log('Found dates in lease:', allDates.map(d => d.raw));
+  logger.debug('Found dates in lease', { dates: allDates.map(d => d.raw) });
 
   // Try specific patterns first for start date
   const startDatePatterns = [
@@ -250,7 +250,7 @@ function extractStructuredData(text, sections) {
       const parsedDate = normalizeDate(match[1]);
       if (parsedDate && parsedDate.length === 10) {
         extracted.lease_start_date = parsedDate;
-        console.log('Matched start date:', match[1], '->', parsedDate);
+        logger.debug('Matched start date', { raw: match[1], parsed: parsedDate });
         break;
       }
     }
@@ -259,7 +259,7 @@ function extractStructuredData(text, sections) {
   // If no start date found, use first date in document as fallback
   if (!extracted.lease_start_date && allDates.length > 0) {
     extracted.lease_start_date = allDates[0].parsed;
-    console.log('Using first date as start date:', allDates[0].raw);
+    logger.debug('Using first date as start date', { raw: allDates[0].raw });
   }
 
   const endDatePatterns = [
@@ -280,7 +280,7 @@ function extractStructuredData(text, sections) {
       const parsedDate = normalizeDate(match[1]);
       if (parsedDate && parsedDate.length === 10) {
         extracted.lease_end_date = parsedDate;
-        console.log('Matched end date:', match[1], '->', parsedDate);
+        logger.debug('Matched end date', { raw: match[1], parsed: parsedDate });
         break;
       }
     }
@@ -289,7 +289,7 @@ function extractStructuredData(text, sections) {
   // If no end date found but we have multiple dates, use second date as fallback
   if (!extracted.lease_end_date && allDates.length > 1) {
     extracted.lease_end_date = allDates[1].parsed;
-    console.log('Using second date as end date:', allDates[1].raw);
+    logger.debug('Using second date as end date', { raw: allDates[1].raw });
   }
 
   // Extract tenant name - be very conservative to avoid false matches

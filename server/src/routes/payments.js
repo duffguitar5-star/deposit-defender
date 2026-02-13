@@ -108,7 +108,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (error) {
-    console.error('Webhook signature verification failed:', error.message);
+    logger.error('Webhook signature verification failed', { error: error.message });
     return res.status(400).send(`Webhook Error: ${error.message}`);
   }
 
@@ -119,14 +119,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       const caseId = session.metadata.caseId;
 
       if (!caseId) {
-        console.error('No caseId in session metadata');
+        logger.error('No caseId in session metadata', { sessionId: session.id });
         break;
       }
 
       const existingCase = getCase(caseId);
 
       if (!existingCase) {
-        console.error(`Case not found for caseId: ${caseId}`);
+        logger.error('Case not found for payment', { caseId });
         break;
       }
 
@@ -136,19 +136,19 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         stripeSessionId: session.id,
       });
 
-      console.log(`Payment completed for case: ${caseId}`);
+      logger.info('Payment completed', { caseId, sessionId: session.id });
       break;
     }
 
     case 'charge.refunded': {
       const charge = event.data.object;
-      console.log(`Charge refunded: ${charge.id}`);
+      logger.info('Charge refunded', { chargeId: charge.id });
       // Future: Handle refund logic here
       break;
     }
 
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      logger.debug('Unhandled webhook event type', { eventType: event.type });
   }
 
   return res.status(200).json({ received: true });
