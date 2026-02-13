@@ -340,15 +340,23 @@ function buildComplianceSection(report) {
 }
 
 function buildLeveragePointsSection(report) {
-  const points = report.leverage_points;
+  const points = report.leverage_points || [];
+
+  if (points.length === 0) {
+    return `
+    <div class="section">
+      <div class="section-title">Leverage Points</div>
+      <p>No specific leverage points identified for this case.</p>
+    </div>`;
+  }
 
   const pointsHtml = points.map(point => `
     <div class="leverage-point">
-      <h4><span class="rank-badge">${point.rank}</span>${escapeHtml(point.title)}</h4>
-      <p>${escapeHtml(point.observation)}</p>
+      <h4><span class="rank-badge">${point.rank || ''}</span>${escapeHtml(point.title || 'Untitled')}</h4>
+      <p>${escapeHtml(point.observation || point.description || '')}</p>
       ${point.supporting_facts && point.supporting_facts.length > 0 ? `
         <ul>
-          ${point.supporting_facts.map(f => `<li>${escapeHtml(f.fact)} <em>(${escapeHtml(f.source)})</em></li>`).join('')}
+          ${point.supporting_facts.map(f => `<li>${escapeHtml(f.fact || f)} <em>${f.source ? `(${escapeHtml(f.source)})` : ''}</em></li>`).join('')}
         </ul>
       ` : ''}
       ${point.statutory_context ? `<p><small>${escapeHtml(point.statutory_context)}</small></p>` : ''}
@@ -358,30 +366,29 @@ function buildLeveragePointsSection(report) {
   return `
   <div class="section">
     <div class="section-title">Leverage Points</div>
-    <p><em>${escapeHtml(report.disclaimers.sections.find(s => s.section === 'leverage_points')?.disclaimer || '')}</em></p>
+    <p><em>${escapeHtml(report.disclaimers?.primary || '')}</em></p>
     ${pointsHtml}
   </div>`;
 }
 
 function buildStatutoryReferencesSection(report) {
-  const refs = report.statutory_references;
+  const refs = report.statutory_references || [];
 
+  // Use actual CaseAnalysisService structure: { citation, topic }
   const refsHtml = refs.map(ref => `
     <tr>
       <td><span class="citation">${escapeHtml(ref.citation)}</span></td>
-      <td>${escapeHtml(ref.title)}</td>
-      <td>${escapeHtml(ref.summary)}</td>
-      <td>${escapeHtml(ref.relevance_to_case)}</td>
+      <td>${escapeHtml(ref.topic || ref.title || '')}</td>
     </tr>
   `).join('');
 
   return `
   <div class="section page-break">
     <div class="section-title">Texas Property Code References</div>
-    <p><em>${escapeHtml(report.disclaimers.sections.find(s => s.section === 'statutory_references')?.disclaimer || '')}</em></p>
+    <p><em>The following statutes may be relevant to your case.</em></p>
 
     <table>
-      <tr><th>Citation</th><th>Title</th><th>Summary</th><th>Relevance</th></tr>
+      <tr><th>Citation</th><th>Topic</th></tr>
       ${refsHtml}
     </table>
   </div>`;
@@ -419,25 +426,42 @@ function buildLeaseClausesSection(report) {
 }
 
 function buildProceduralStepsSection(report) {
-  const steps = report.procedural_steps;
+  const steps = report.procedural_steps || [];
 
-  const stepsHtml = steps.map(step => `
-    <div style="margin-bottom: 12px;">
-      <p><span class="step-number">${step.step_number}</span><strong>${escapeHtml(step.title)}</strong></p>
-      <p style="margin-left: 32px;">${escapeHtml(step.description)}</p>
-      ${step.applicability_note ? `<p style="margin-left: 32px;"><small><em>${escapeHtml(step.applicability_note)}</em></small></p>` : ''}
-      ${step.resources && step.resources.length > 0 ? `
-        <ul style="margin-left: 32px;">
-          ${step.resources.map(r => `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.title)}</a></li>`).join('')}
-        </ul>
-      ` : ''}
-    </div>
-  `).join('');
+  if (steps.length === 0) {
+    return `
+    <div class="section">
+      <div class="section-title">Recommended Next Steps</div>
+      <p>Consult with a qualified attorney to discuss your specific situation and next steps.</p>
+    </div>`;
+  }
+
+  // Handle both string steps and object steps
+  const stepsHtml = steps.map((step, index) => {
+    if (typeof step === 'string') {
+      return `
+        <div style="margin-bottom: 12px;">
+          <p><span class="step-number">${index + 1}</span><strong>${escapeHtml(step)}</strong></p>
+        </div>`;
+    }
+
+    return `
+      <div style="margin-bottom: 12px;">
+        <p><span class="step-number">${step.step_number || index + 1}</span><strong>${escapeHtml(step.title || step.description || '')}</strong></p>
+        ${step.description && step.title ? `<p style="margin-left: 32px;">${escapeHtml(step.description)}</p>` : ''}
+        ${step.applicability_note ? `<p style="margin-left: 32px;"><small><em>${escapeHtml(step.applicability_note)}</em></small></p>` : ''}
+        ${step.resources && step.resources.length > 0 ? `
+          <ul style="margin-left: 32px;">
+            ${step.resources.map(r => `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.title)}</a></li>`).join('')}
+          </ul>
+        ` : ''}
+      </div>`;
+  }).join('');
 
   return `
   <div class="section">
-    <div class="section-title">Procedural Steps</div>
-    <p><em>${escapeHtml(report.disclaimers.sections.find(s => s.section === 'procedural_steps')?.disclaimer || '')}</em></p>
+    <div class="section-title">Recommended Next Steps</div>
+    <p><em>${escapeHtml(report.disclaimers?.primary || '')}</em></p>
     ${stepsHtml}
   </div>`;
 }
