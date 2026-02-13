@@ -29,10 +29,9 @@ router.post('/create-checkout-session', paymentLimiter, async (req, res) => {
       return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
     }
 
-    // Check session ownership (only after confirming case exists)
-    if (!canAccessCase(req, caseId)) {
-      return res.status(403).json(createErrorResponse(ERROR_CODES.ACCESS_DENIED));
-    }
+    // Note: No session check required for payment creation.
+    // Case ID is a UUID (secure token). Anyone with valid case ID can pay.
+    // This allows users to complete payment after browser refresh or from different devices.
 
     if (existingCase.paymentStatus === 'paid') {
       return res.status(400).json({
