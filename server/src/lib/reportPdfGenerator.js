@@ -252,23 +252,22 @@ function buildDisclaimerSection(report) {
 }
 
 function buildTimelineSection(report) {
-  const timeline = report.timeline;
-  const keyDates = timeline.key_dates;
+  const timeline = report.timeline || {};
 
-  let deadlinesHtml = '';
-  if (Array.isArray(timeline.computed_deadlines) && timeline.computed_deadlines.length > 0) {
-    const firstDeadline = timeline.computed_deadlines[0];
-    if (firstDeadline.deadline_id) {
-      deadlinesHtml = timeline.computed_deadlines.map(d => `
-        <tr>
-          <td>${escapeHtml(d.label)}</td>
-          <td>${escapeHtml(d.date)}</td>
-          <td>${d.has_passed ? '<span class="status-no">Passed</span>' : `${d.days_remaining} days remaining`}</td>
-          <td><span class="citation">${escapeHtml(d.reference)}</span></td>
-        </tr>
-      `).join('');
+  // Use actual CaseAnalysisService structure: timeline has move_out_date, days_since_move_out, past_30_days
+  const moveOutDate = timeline.move_out_date || 'Not provided';
+  const daysSinceMoveOut = timeline.days_since_move_out;
+  const past30Days = timeline.past_30_days;
+
+  // Build status summary
+  let statusText = 'Status could not be calculated.';
+  if (daysSinceMoveOut !== null && daysSinceMoveOut !== undefined) {
+    statusText = `It has been ${daysSinceMoveOut} days since move-out.`;
+    if (past30Days) {
+      statusText += ' The 30-day deposit refund deadline has passed.';
     } else {
-      deadlinesHtml = `<tr><td colspan="4">${escapeHtml(firstDeadline)}</td></tr>`;
+      const daysRemaining = 30 - daysSinceMoveOut;
+      statusText += ` The landlord has ${daysRemaining} days remaining to refund the deposit or provide an itemized deduction list.`;
     }
   }
 
@@ -279,51 +278,64 @@ function buildTimelineSection(report) {
     <div class="subsection-title">Key Dates</div>
     <table>
       <tr><th>Date Type</th><th>Date</th></tr>
-      <tr><td>Move-out Date</td><td>${escapeHtml(keyDates.move_out_date)}</td></tr>
-      ${keyDates.forwarding_address_date ? `<tr><td>Forwarding Address Provided</td><td>${escapeHtml(keyDates.forwarding_address_date)}</td></tr>` : ''}
-      ${keyDates.lease_start_date ? `<tr><td>Lease Start</td><td>${escapeHtml(keyDates.lease_start_date)}</td></tr>` : ''}
-      ${keyDates.lease_end_date ? `<tr><td>Lease End</td><td>${escapeHtml(keyDates.lease_end_date)}</td></tr>` : ''}
-    </table>
-
-    <div class="subsection-title">Computed Deadlines</div>
-    <table>
-      <tr><th>Deadline</th><th>Date</th><th>Status</th><th>Reference</th></tr>
-      ${deadlinesHtml}
+      <tr><td>Move-out Date</td><td>${escapeHtml(moveOutDate)}</td></tr>
     </table>
 
     <div class="subsection-title">Current Status</div>
-    <p><strong>Days since move-out:</strong> ${timeline.current_status.days_since_move_out}</p>
-    <p>${escapeHtml(timeline.current_status.summary_text)}</p>
+    <p><strong>Days since move-out:</strong> ${daysSinceMoveOut !== null && daysSinceMoveOut !== undefined ? daysSinceMoveOut : 'Unknown'}</p>
+    <p>${statusText}</p>
   </div>`;
 }
 
 function buildComplianceSection(report) {
-  const checklist = report.compliance_checklist;
+  const checklist = report.compliance_checklist || {};
 
-  const itemsHtml = checklist.items.map(item => {
+  // Use actual CaseAnalysisService structure: boolean fields
+  const items = [
+    {
+      label: 'Deposit Returned',
+      status: checklist.deposit_returned ? 'yes' : 'no',
+      reference: 'Tex. Prop. Code § 92.103'
+    },
+    {
+      label: 'Itemization Provided',
+      status: checklist.itemization_provided ? 'yes' : 'no',
+      reference: 'Tex. Prop. Code § 92.104'
+    },
+    {
+      label: 'Refund Within 30 Days',
+      status: checklist.refund_within_30_days ? 'yes' : 'no',
+      reference: 'Tex. Prop. Code § 92.103'
+    }
+  ];
+
+  const itemsHtml = items.map(item => {
     const statusClass = `status-${item.status}`;
     const statusLabel = item.status.charAt(0).toUpperCase() + item.status.slice(1);
     return `
       <tr>
         <td>${escapeHtml(item.label)}</td>
         <td><span class="${statusClass}">${statusLabel}</span></td>
-        <td>${escapeHtml(item.basis)}</td>
         <td><span class="citation">${escapeHtml(item.reference)}</span></td>
       </tr>
     `;
   }).join('');
 
+  // Build summary text
+  const passedCount = items.filter(i => i.status === 'yes').length;
+  const totalCount = items.length;
+  const summaryText = `Landlord has complied with ${passedCount} out of ${totalCount} key requirements.`;
+
   return `
   <div class="section">
     <div class="section-title">Compliance Checklist</div>
-    <p><em>${escapeHtml(report.disclaimers.sections.find(s => s.section === 'compliance_checklist')?.disclaimer || '')}</em></p>
 
     <table>
-      <tr><th>Item</th><th>Status</th><th>Basis</th><th>Reference</th></tr>
+      <tr><th>Requirement</th><th>Complied</th><th>Reference</th></tr>
       ${itemsHtml}
     </table>
 
-    <p><strong>Summary:</strong> ${escapeHtml(checklist.summary.summary_text)}</p>
+    <p><strong>Summary:</strong> ${summaryText}</p>
   </div>`;
 }
 
