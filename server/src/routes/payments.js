@@ -22,15 +22,16 @@ router.post('/create-checkout-session', paymentLimiter, async (req, res) => {
       });
     }
 
-    // Check session ownership
-    if (!canAccessCase(req, caseId)) {
-      return res.status(403).json(createErrorResponse(ERROR_CODES.ACCESS_DENIED));
-    }
-
-    const existingCase = getCase(caseId);
+    // Check if case exists first (using new per-case folder structure)
+    const existingCase = await getCase(caseId);
 
     if (!existingCase) {
       return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
+    }
+
+    // Check session ownership (only after confirming case exists)
+    if (!canAccessCase(req, caseId)) {
+      return res.status(403).json(createErrorResponse(ERROR_CODES.ACCESS_DENIED));
     }
 
     if (existingCase.paymentStatus === 'paid') {
@@ -123,7 +124,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         break;
       }
 
-      const existingCase = getCase(caseId);
+      const existingCase = await getCase(caseId);
 
       if (!existingCase) {
         logger.error('Case not found for payment', { caseId });
@@ -171,7 +172,7 @@ router.get('/verify/:sessionId', async (req, res) => {
       return res.status(404).json(createErrorResponse(ERROR_CODES.SESSION_NOT_FOUND));
     }
 
-    let caseData = getCaseBySessionId(sessionId);
+    let caseData = await getCaseBySessionId(sessionId);
 
     if (!caseData) {
       return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND, 'Case not found for this session.'));

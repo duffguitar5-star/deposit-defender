@@ -39,8 +39,7 @@ app.get('/api/health', (req, res) => {
   const fs = require('fs');
   const path = require('path');
 
-  const dataDir = path.join(__dirname, '..', 'data');
-  const dataFile = path.join(dataDir, 'cases.json');
+  const casesDir = path.join(__dirname, '..', 'data', 'cases');
 
   const health = {
     status: 'ok',
@@ -62,12 +61,12 @@ app.get('/api/health', (req, res) => {
     },
   };
 
-  // Check datastore accessibility
+  // Check datastore accessibility (per-case folder structure)
   try {
-    if (fs.existsSync(dataFile)) {
-      const stats = fs.statSync(dataFile);
+    if (fs.existsSync(casesDir)) {
+      const stats = fs.statSync(casesDir);
       health.services.datastore = 'accessible';
-      health.services.datastoreSize = stats.size;
+      health.services.datastoreType = 'per-case-folders';
     } else {
       health.services.datastore = 'not_found';
       health.status = 'degraded';
@@ -99,8 +98,7 @@ app.get('/api/health/ready', async (req, res) => {
   const fs = require('fs');
   const path = require('path');
 
-  const dataDir = path.join(__dirname, '..', 'data');
-  const dataFile = path.join(dataDir, 'cases.json');
+  const casesDir = path.join(__dirname, '..', 'data', 'cases');
 
   const ready = {
     status: 'ready',
@@ -111,11 +109,11 @@ app.get('/api/health/ready', async (req, res) => {
     },
   };
 
-  // Check datastore
+  // Check datastore (per-case folder structure)
   try {
-    if (fs.existsSync(dataFile)) {
-      // Try to read the file
-      fs.readFileSync(dataFile, 'utf8');
+    if (fs.existsSync(casesDir)) {
+      // Try to read the directory
+      fs.readdirSync(casesDir);
       ready.checks.datastore = true;
     }
   } catch (error) {

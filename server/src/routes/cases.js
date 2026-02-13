@@ -632,8 +632,8 @@ router.post('/', caseCreationLimiter, async (req, res) => {
   });
 });
 
-router.get('/:caseId', requireCaseOwnership, (req, res) => {
-  const storedCase = getCase(req.params.caseId);
+router.get('/:caseId', requireCaseOwnership, async (req, res) => {
+  const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));

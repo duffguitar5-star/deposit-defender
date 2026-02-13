@@ -22,7 +22,7 @@ const router = express.Router();
  * Generate and download Case Analysis Report as PDF
  */
 router.get('/:caseId', requireCaseOwnership, async (req, res) => {
-  const storedCase = getCase(req.params.caseId);
+  const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
@@ -85,7 +85,7 @@ router.get('/:caseId', requireCaseOwnership, async (req, res) => {
  * Get Case Analysis Report as JSON
  */
 router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
-  const storedCase = getCase(req.params.caseId);
+  const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json({
@@ -135,7 +135,7 @@ router.get('/:caseId/json', requireCaseOwnership, async (req, res) => {
  * Returns a limited preview for UI display
  */
 router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
-  const storedCase = getCase(req.params.caseId);
+  const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json({
@@ -178,7 +178,7 @@ router.get('/:caseId/preview', requireCaseOwnership, async (req, res) => {
  * Email address is used transiently and not stored
  */
 router.post('/:caseId/email', requireCaseOwnership, async (req, res) => {
-  const storedCase = getCase(req.params.caseId);
+  const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
