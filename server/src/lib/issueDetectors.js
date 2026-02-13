@@ -515,6 +515,41 @@ function detectIssues(intake, timeline, leaseClauses) {
   const ctx = new EvaluationContext(intake, timeline, leaseClauses);
   const detectedIssues = [];
 
+  // DEBUG: Log the normalized context object
+  logger.info('===== ISSUE DETECTOR DEBUG =====');
+  logger.info('Normalized Context Object:', {
+    depositReturned: ctx.depositReturned,
+    depositReturnedType: typeof ctx.depositReturned,
+    depositAmount: ctx.depositAmount,
+    amountReturned: ctx.amountReturned,
+    itemizedReceived: ctx.itemizedReceived,
+    itemizedReceivedType: typeof ctx.itemizedReceived,
+    past30Days: ctx.past30Days,
+    past30DaysType: typeof ctx.past30Days,
+    daysSinceMoveOut: ctx.daysSinceMoveOut,
+    moveOutDate: ctx.moveOutDate,
+    forwardingProvided: ctx.forwardingProvided,
+  });
+  logger.info('Timeline object:', timeline);
+  logger.info('Intake security_deposit_information:', intake?.security_deposit_information);
+  logger.info('Intake post_move_out_communications:', intake?.post_move_out_communications);
+  logger.info('================================');
+
+  // DEBUG: Log the exact condition for deadline_missed_full_deposit detector
+  const deadline_missed_detector = ISSUE_DETECTORS.find(d => d.id === 'deadline_missed_full_deposit');
+  if (deadline_missed_detector) {
+    const conditionResult = {
+      past30Days: ctx.past30Days,
+      'past30Days === true': ctx.past30Days === true,
+      depositReturned: ctx.depositReturned,
+      'depositReturned === "no"': ctx.depositReturned === 'no',
+      itemizedReceived: ctx.itemizedReceived,
+      'itemizedReceived === "no"': ctx.itemizedReceived === 'no',
+      OVERALL: ctx.past30Days && ctx.depositReturned === 'no' && ctx.itemizedReceived === 'no',
+    };
+    logger.info('deadline_missed_full_deposit condition check:', conditionResult);
+  }
+
   for (const detector of ISSUE_DETECTORS) {
     try {
       if (detector.evaluate(ctx)) {
@@ -535,6 +570,9 @@ function detectIssues(intake, timeline, leaseClauses) {
 
   // Sort by rank_weight descending
   detectedIssues.sort((a, b) => b.rank_weight - a.rank_weight);
+
+  logger.info('Detected issues count:', detectedIssues.length);
+  logger.info('Detected issue IDs:', detectedIssues.map(i => i.issue_id));
 
   return detectedIssues;
 }
