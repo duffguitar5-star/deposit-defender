@@ -1,85 +1,57 @@
-const express = require('express');
-const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
-const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
-const { fileUploadLimiter, caseCreationLimiter } = require('../middleware/rateLimiter');
-const logger = require('../lib/logger');
-const { validateIntake } = require('../lib/intakeValidation');
-const { saveCase, getCase, updateCaseLeaseData } = require('../lib/caseStore');
-const {
-  extractTextFromImage,
-  extractTextFromPdf,
-  extractTextFromPdfOcr,
-} = require('../lib/leaseExtraction');
-const { associateCaseWithSession, requireCaseOwnership } = require('../middleware/sessionAuth');
+#!/usr/bin/env node
+/**
+ * CLI test harness for lease extraction pipeline.
+ *
+ * Usage:
+ *   node server/scripts/testLeaseExtraction.cjs <path-to-pdf>
+ *
+ * Outputs structured extracted fields as JSON plus a text preview.
+ */
 
-const router = express.Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
+'use strict';
 
-// Magic byte signatures for file type validation
-const FILE_SIGNATURES = {
-  pdf: Buffer.from([0x25, 0x50, 0x44, 0x46]), // %PDF
-  png: Buffer.from([0x89, 0x50, 0x4e, 0x47]), // PNG
-  jpg: Buffer.from([0xff, 0xd8, 0xff]),         // JPEG
-};
+const fs = require('fs');
+const path = require('path');
 
-function validateFileType(buffer, declaredMimetype) {
-  if (!buffer || buffer.length < 4) return false;
-  if (declaredMimetype === 'application/pdf') return buffer.slice(0, 4).equals(FILE_SIGNATURES.pdf);
-  if (declaredMimetype === 'image/png') return buffer.slice(0, 4).equals(FILE_SIGNATURES.png);
-  if (declaredMimetype.includes('jpeg') || declaredMimetype.includes('jpg')) return buffer.slice(0, 3).equals(FILE_SIGNATURES.jpg);
-  return false;
+const filePath = process.argv[2];
+
+if (!filePath) {
+  console.error('Usage: node server/scripts/testLeaseExtraction.cjs <path-to-pdf>');
+  process.exit(1);
 }
+
+const absolutePath = path.resolve(filePath);
+
+if (!fs.existsSync(absolutePath)) {
+  console.error(`File not found: ${absolutePath}`);
+  process.exit(1);
+}
+
+// ── Inline copies of extractStructuredData / extractSections so this script
+//    is self-contained and does not depend on route-level code ────────────────
 
 const TOPIC_DEFINITIONS = [
   {
     key: 'security_deposit',
     label: 'Security deposit',
     keywords: ['security deposit', 'securitydeposit', 'deposit amount', 'deposit is', 'deposit of', 'refundable', 'damage deposit', 'pet deposit', 'deposit paid', 'deposit will', 'deposit shall'],
-    summary: 'The lease text references security deposits.',
   },
   {
     key: 'cleaning',
     label: 'Cleaning',
     keywords: ['cleaning', 'clean', 'cleaned', 'carpet', 'janitorial'],
-    summary: 'The lease text references cleaning expectations.',
   },
   {
     key: 'damage',
     label: 'Damage',
     keywords: ['damage', 'damages', 'repair', 'repairs', 'wear and tear'],
-    summary: 'The lease text references damage-related terms.',
   },
   {
     key: 'move_out',
     label: 'Move-out obligations',
     keywords: ['move out', 'move-out', 'moveout', 'vacate', 'surrender', 'keys', 'forwarding address'],
-    summary: 'The lease text references move-out expectations.',
   },
 ];
-
-function extractTextFromBuffer(buffer) {
-  const utf8Text = buffer.toString('utf8');
-  const cleaned = utf8Text.replace(/[^ -~\n\r\t]+/g, ' ');
-  return cleaned.replace(/\s+/g, ' ').trim();
-}
-
-function getLeaseExtractionErrorMessage(error, isImage) {
-  const msg = error && error.message ? error.message.toLowerCase() : '';
-  if (msg.includes('invalid pdf') || msg.includes('corrupted') || msg.includes('damaged')) {
-    return 'The file appears to be corrupted. Please try uploading a different copy of your lease.';
-  }
-  if (msg.includes('password') || msg.includes('encrypted')) {
-    return 'This PDF is password-protected. Please remove the password and try again.';
-  }
-  if (isImage) {
-    return 'Unable to extract text from this image. Please upload a PDF for best results, or fill in the fields manually.';
-  }
-  return 'Unable to process this file. Please verify it is a valid PDF and try again.';
-}
 
 function normalizeDate(dateStr) {
   if (!dateStr) return null;
@@ -102,7 +74,7 @@ function normalizeDate(dateStr) {
     let [month, day, year] = parts;
     if (year.length === 2) {
       const century = Math.floor(new Date().getFullYear() / 100) * 100;
-      year = String(century + parseInt(year));
+      year = String(century + parseInt(year, 10));
     }
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
@@ -247,21 +219,6 @@ function extractStructuredData(text, sections) {
     }
   }
 
-  // Landlord address
-  const landlordAddrPatterns = [
-    /(?:landlord|lessor|owner|management)[^.]*?(?:address|located\s+at)[:\s]+([0-9]+\s+[A-Za-z0-9\s#.'-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Suite|Ste|Unit|#)[^,\n]*)/gi,
-  ];
-  for (const p of landlordAddrPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1]) {
-      const addr = m[1].trim().replace(/\s+/g, ' ').replace(/[,;]$/, '').trim();
-      if (addr.length > 5 && addr.length < 150 && /^\d/.test(addr) && addr !== extracted.property_address) {
-        extracted.landlord_address = addr; break;
-      }
-    }
-  }
-
   // County
   const countyPatterns = [
     /([A-Za-z]+)\s+county\s*,\s*(?:TX|Texas)/gi,
@@ -281,7 +238,7 @@ function extractStructuredData(text, sections) {
 
 function extractSections(text) {
   if (!text) {
-    return TOPIC_DEFINITIONS.map((t) => ({ topic: t.label, summary: 'Nothing noted for this topic.', excerpts: [] }));
+    return TOPIC_DEFINITIONS.map((t) => ({ topic: t.label, summary: 'Nothing noted.', excerpts: [] }));
   }
   const normalized = text.replace(/\s+/g, ' ').trim();
   const lineSegments = text.split(/\r?\n+/).map((s) => s.trim()).filter(Boolean);
@@ -326,7 +283,7 @@ function extractSections(text) {
       const unique = [...new Set(amounts)];
       return {
         topic: topic.label,
-        summary: unique.length > 0 ? 'The lease references a security deposit amount.' : 'Nothing noted for this topic.',
+        summary: unique.length > 0 ? 'The lease references a security deposit amount.' : 'Nothing noted.',
         excerpts: unique.length > 0 ? [unique[0]] : [],
       };
     }
@@ -338,133 +295,91 @@ function extractSections(text) {
     });
     return {
       topic: topic.label,
-      summary: matches.length > 0 ? topic.summary : 'Nothing noted for this topic.',
+      summary: matches.length > 0 ? `Found relevant clauses.` : 'Nothing noted.',
       excerpts: matches,
     };
   });
 }
 
-// ─── Routes ────────────────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────────────
 
-router.post('/', caseCreationLimiter, async (req, res) => {
-  // Separate lease_text (optional, not part of intake schema) from intake payload
-  const { lease_text: leaseText, ...payload } = req.body;
-  const { valid, errors } = validateIntake(payload);
+async function main() {
+  console.log(`\nLease Extraction Test Harness`);
+  console.log(`File: ${absolutePath}`);
+  console.log('─'.repeat(60));
 
-  if (!valid) {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_INPUT, null, errors));
-  }
+  const buffer = fs.readFileSync(absolutePath);
+  console.log(`Buffer size: ${buffer.length} bytes`);
 
-  const caseId = uuidv4();
-  await saveCase(caseId, payload);
-  associateCaseWithSession(req, caseId);
-
-  // Persist extracted lease text if provided (runs before analysis is generated)
-  if (leaseText && typeof leaseText === 'string' && leaseText.trim().length > 0) {
-    try {
-      await updateCaseLeaseData(caseId, leaseText);
-      logger.info('Lease text persisted with case', {
-        caseId,
-        leaseTextLength: leaseText.length,
-      });
-    } catch (leaseErr) {
-      // Non-fatal — case is still valid without lease text
-      logger.warn('Failed to persist lease text', { caseId, error: leaseErr.message });
-    }
-  }
-
-  logger.logCaseOperation('Intake received', caseId, {
-    jurisdiction: payload.jurisdiction,
-    leaseType: payload.lease_information?.lease_type,
-    depositReturned: payload.security_deposit_information?.deposit_returned,
-    hasLeaseText: !!(leaseText && leaseText.trim().length > 0),
-  });
-
-  return res.status(201).json({
-    status: 'ok',
-    data: { caseId },
-    message: 'Intake received for document preparation. No legal advice is provided.',
-  });
-});
-
-router.get('/:caseId', requireCaseOwnership, async (req, res) => {
-  const storedCase = await getCase(req.params.caseId);
-  if (!storedCase) return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
-  return res.json({ status: 'ok', data: { case: storedCase } });
-});
-
-router.post('/lease-extract', fileUploadLimiter, upload.single('lease'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_FILE_TYPE, 'Lease file is required.'));
-  }
-
-  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-  if (!allowedTypes.includes(req.file.mimetype)) {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_FILE_TYPE));
-  }
-
-  if (!validateFileType(req.file.buffer, req.file.mimetype)) {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.FILE_CONTENT_MISMATCH));
-  }
-
-  const isImage = req.file.mimetype.startsWith('image/');
+  // Step 1: Extract text
+  console.log('\n[1] Extracting text via pdfjs-dist...');
   let text = '';
-
   try {
-    if (isImage) {
-      text = await extractTextFromImage(req.file.buffer);
-    } else {
-      text = await extractTextFromPdf(req.file.buffer);
-      if (!text || text.trim().length < 40) {
-        text = await extractTextFromPdfOcr(req.file.buffer);
-      }
-      if (!text) {
-        text = extractTextFromBuffer(req.file.buffer);
-      }
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const data = Uint8Array.from(buffer);
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdf = await loadingTask.promise;
+    const pageCount = Math.min(pdf.numPages, 10);
+    console.log(`    Pages: ${pdf.numPages} (processing up to ${pageCount})`);
+    for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {
+      const page = await pdf.getPage(pageIndex);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item) => item.str).join(' ');
+      text += `${pageText}\n`;
     }
-  } catch (error) {
-    logger.error('Lease extraction failed', {
-      route: '/api/cases/lease-extract',
-      error,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-    });
-    return res.status(500).json(
-      createErrorResponse(ERROR_CODES.LEASE_EXTRACTION_FAILED, getLeaseExtractionErrorMessage(error, isImage))
-    );
+    text = text.trim();
+    console.log(`    Text length: ${text.length} chars`);
+  } catch (err) {
+    console.warn(`    pdfjs-dist failed: ${err.message}`);
+    console.log('    Falling back to pdf-parse...');
+    try {
+      const pdfParse = require('pdf-parse');
+      const result = await pdfParse(buffer, { max: 10 });
+      text = result.text || '';
+      console.log(`    pdf-parse text length: ${text.length} chars`);
+    } catch (fallbackErr) {
+      console.error(`    Both extractors failed: ${fallbackErr.message}`);
+      process.exit(1);
+    }
   }
 
+  if (text.length < 40) {
+    console.warn('\n[!] Very short text — this may be a scanned PDF. OCR not available in V1.');
+  }
+
+  // Step 2: Extract sections
+  console.log('\n[2] Extracting sections...');
   const sections = extractSections(text);
-  const preview = text ? text.slice(0, 600).trim() : '';
+  sections.forEach((s) => {
+    console.log(`    ${s.topic}: ${s.excerpts.length} excerpt(s)`);
+    s.excerpts.slice(0, 1).forEach((e) => console.log(`      → ${e.slice(0, 100)}...`));
+  });
+
+  // Step 3: Extract structured data
+  console.log('\n[3] Extracting structured fields...');
   const extractedData = extractStructuredData(text, sections);
 
-  // Minimal extraction logging
-  logger.info('Lease extraction complete', {
-    route: '/api/cases/lease-extract',
-    textLength: text ? text.length : 0,
-    extractedDeposit: extractedData?.deposit_amount || null,
-    extractedMoveOutTerms: sections.find((s) => s.topic === 'Move-out obligations')?.excerpts?.length ?? 0,
-    extractedForwardingAddressClause: sections
-      .find((s) => s.topic === 'Move-out obligations')
-      ?.excerpts?.some((e) => /forwarding/i.test(e)) ?? false,
-    fieldsDetected: extractedData ? Object.keys(extractedData).length : 0,
-    isImage,
-  });
+  // Step 4: Output
+  console.log('\n[4] RESULT\n' + '─'.repeat(60));
+  console.log('\nExtracted fields:');
+  console.log(JSON.stringify(extractedData || {}, null, 2));
 
-  return res.json({
-    status: 'ok',
-    data: {
-      sections,
-      preview,
-      leaseText: text || '',
-      extractedData: extractedData || {},
-    },
-    message: extractedData
-      ? 'Lease text extracted. Review the auto-filled fields below and correct anything that looks wrong.'
-      : isImage
-        ? 'Image uploaded. Please fill in your lease details below — image text extraction is not available yet.'
-        : 'Lease processed. Please fill in any fields not auto-detected below.',
-  });
+  console.log('\nText preview (first 500 chars):');
+  console.log(text.slice(0, 500));
+
+  console.log('\nMove-out section excerpts:');
+  const moveOut = sections.find((s) => s.topic === 'Move-out obligations');
+  console.log(JSON.stringify(moveOut?.excerpts || [], null, 2));
+
+  const forwarding = moveOut?.excerpts?.some((e) => /forwarding/i.test(e));
+  console.log(`\nForwarding address clause detected: ${forwarding ? 'YES' : 'NO'}`);
+
+  console.log('\n' + '─'.repeat(60));
+  console.log(`Fields detected: ${extractedData ? Object.keys(extractedData).length : 0}`);
+  console.log('Done.\n');
+}
+
+main().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
 });
-
-module.exports = router;
