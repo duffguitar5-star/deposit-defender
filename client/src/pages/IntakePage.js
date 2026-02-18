@@ -61,9 +61,22 @@ function IntakePage() {
       landlord_information: {
         ...prev.landlord_information,
         landlord_name: ext.landlord_name || prev.landlord_information.landlord_name,
-        landlord_address: ext.landlord_address || prev.landlord_information.landlord_address,
-        landlord_city: ext.landlord_city || prev.landlord_information.landlord_city,
-        landlord_zip: ext.landlord_zip || prev.landlord_information.landlord_zip,
+        // landlord_address may now be { street, city, state, zip } or a legacy string
+        landlord_address: (
+          ext.landlord_address && typeof ext.landlord_address === 'object'
+            ? ext.landlord_address.street
+            : ext.landlord_address
+        ) || prev.landlord_information.landlord_address,
+        landlord_city: (
+          ext.landlord_address && typeof ext.landlord_address === 'object'
+            ? ext.landlord_address.city
+            : ext.landlord_city
+        ) || prev.landlord_information.landlord_city,
+        landlord_zip: (
+          ext.landlord_address && typeof ext.landlord_address === 'object'
+            ? ext.landlord_address.zip
+            : ext.landlord_zip
+        ) || prev.landlord_information.landlord_zip,
       },
       property_information: {
         ...prev.property_information,
