@@ -5,13 +5,19 @@
  * Usage:
  *   node server/scripts/testLeaseExtraction.cjs <path-to-pdf>
  *
- * Outputs structured extracted fields as JSON plus a text preview.
+ * Outputs structured extracted fields as JSON, top-3 address candidates
+ * with scores, and a text preview.
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+
+// Import address extraction helpers directly from the production module.
+// extractAddressFromText and extractLandlordNoticeAddress are synchronous
+// and do not depend on pdfjs-dist, so CJS require works fine here.
+const { extractAddressFromText, extractLandlordNoticeAddress } = require('../src/lib/leaseExtraction');
 
 const filePath = process.argv[2];
 
@@ -105,40 +111,37 @@ function extractStructuredData(text, sections) {
     }
   }
 
-  // Property address
-  const addressPatterns = [
-    /(?:property\s*(?:address)?|premises|leased\s*premises|rental\s*property)[:\s]+([0-9]+[A-Za-z0-9\s#.,'/-]+?)(?:,\s*[A-Z][a-z]+|$|\n)/gi,
-    /(?:located\s+at|address\s*(?:is)?|residing\s+at)[:\s]+([0-9]+[A-Za-z0-9\s#.,'/-]+?)(?:,\s*[A-Z][a-z]+|$|\n)/gi,
-    /\b([0-9]+\s+[A-Za-z0-9\s#.'-]+?(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy|Terrace|Ter|Trail|Trl)\.?\s*(?:#?\s*\d+)?)/gi,
-    /\b([0-9]+\s+[A-Za-z][A-Za-z\s]+?)\s*,\s*[A-Z][a-z]+\s*,?\s*(?:TX|Texas)/gi,
-  ];
-  for (const p of addressPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1]) {
-      const addr = m[1].trim().replace(/\s+/g, ' ').replace(/[,;:]+$/, '').trim();
-      if (addr.length > 5 && addr.length < 150 && /^\d/.test(addr)) {
-        extracted.property_address = addr; break;
+  // Property address — delegated to extractAddressFromText (multi-candidate scoring).
+  // NOTE: pass raw `text` (with newlines), not `normalized`, so multi-line capture works.
+  const propAddr = extractAddressFromText(text);
+  if (propAddr.property_street) {
+    extracted.property_address      = propAddr.property_street;
+    extracted.property_address_full = propAddr.property_address_full;
+    extracted.property_address_confidence = propAddr.property_address_confidence;
+  }
+  if (propAddr.property_city) {
+    extracted.city     = propAddr.property_city;
+    extracted.zip_code = propAddr.property_zip || null;
+    if (propAddr.property_state) extracted.state = propAddr.property_state;
+  } else {
+    const cityPatterns = [
+      /,\s*([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+      /([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+      /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*TX\s*(\d{5})/gi,
+    ];
+    for (const p of cityPatterns) {
+      p.lastIndex = 0;
+      const m = p.exec(normalized);
+      if (m && m[1] && m[2]) {
+        const city = m[1].trim();
+        if (city.length >= 3 && !['the', 'and', 'for', 'that', 'this'].includes(city.toLowerCase())) {
+          extracted.city = city; extracted.zip_code = m[2].trim(); break;
+        }
       }
     }
   }
-
-  // City and ZIP
-  const cityPatterns = [
-    /,\s*([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
-    /([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
-    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*TX\s*(\d{5})/gi,
-  ];
-  for (const p of cityPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1] && m[2]) {
-      const city = m[1].trim();
-      if (city.length >= 3 && !['the', 'and', 'for', 'that', 'this'].includes(city.toLowerCase())) {
-        extracted.city = city; extracted.zip_code = m[2].trim(); break;
-      }
-    }
-  }
+  // Store candidates on the returned object so Step 4 can display them
+  extracted._addressCandidates = propAddr._candidates || [];
 
   // Dates
   const allDates = [];
@@ -359,10 +362,52 @@ async function main() {
   console.log('\n[3] Extracting structured fields...');
   const extractedData = extractStructuredData(text, sections);
 
+  // Step 3b: Address candidate debug output
+  console.log('\n[3b] Address extraction candidates');
+  console.log('─'.repeat(60));
+  const addrResult = extractAddressFromText(text);
+  const allCandidates = addrResult._candidates;
+  if (allCandidates.length === 0) {
+    console.log('    No candidates found.');
+  } else {
+    console.log(`    Total candidates found: ${allCandidates.length}`);
+    console.log(`    Top 3 (sorted by score desc):`);
+    allCandidates.slice(0, 3).forEach((c, i) => {
+      console.log(`\n    [${i + 1}] score=${c.score}  anchor="${c.anchor}"`);
+      console.log(`        text:   "${c.text}"`);
+      console.log(`        reason: ${c.reason || '(none)'}`);
+    });
+  }
+  console.log('\n    Selected address:');
+  if (addrResult.property_street) {
+    console.log(`        full:       ${addrResult.property_address_full}`);
+    console.log(`        street:     ${addrResult.property_street}`);
+    console.log(`        city:       ${addrResult.property_city}`);
+    console.log(`        state:      ${addrResult.property_state}`);
+    console.log(`        zip:        ${addrResult.property_zip}`);
+    console.log(`        confidence: ${addrResult.property_address_confidence}`);
+  } else {
+    console.log('        (none — no candidate reached min score 5 with street suffix + leading digit)');
+  }
+
+  // Also run landlord notice address extraction
+  const landlordAddrResult = extractLandlordNoticeAddress(text);
+  console.log('\n    Landlord notice address:');
+  if (landlordAddrResult.landlord_notice_street) {
+    console.log(`        street: ${landlordAddrResult.landlord_notice_street}`);
+    console.log(`        city:   ${landlordAddrResult.landlord_notice_city}`);
+    console.log(`        state:  ${landlordAddrResult.landlord_notice_state}`);
+    console.log(`        zip:    ${landlordAddrResult.landlord_notice_zip}`);
+  } else {
+    console.log('        (none found)');
+  }
+
   // Step 4: Output
   console.log('\n[4] RESULT\n' + '─'.repeat(60));
-  console.log('\nExtracted fields:');
-  console.log(JSON.stringify(extractedData || {}, null, 2));
+  console.log('\nExtracted fields (excluding _addressCandidates):');
+  const displayData = extractedData ? { ...extractedData } : {};
+  delete displayData._addressCandidates;
+  console.log(JSON.stringify(displayData, null, 2));
 
   console.log('\nText preview (first 500 chars):');
   console.log(text.slice(0, 500));

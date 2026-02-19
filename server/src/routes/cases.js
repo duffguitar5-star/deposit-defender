@@ -10,6 +10,8 @@ const {
   extractTextFromImage,
   extractTextFromPdf,
   extractTextFromPdfOcr,
+  extractAddressFromText,
+  extractLandlordNoticeAddress,
 } = require('../lib/leaseExtraction');
 const { associateCaseWithSession, requireCaseOwnership } = require('../middleware/sessionAuth');
 
@@ -114,58 +116,6 @@ function extractStructuredData(text, sections) {
   const normalized = text.replace(/\s+/g, ' ').trim();
   const extracted = {};
 
-  // ── Address validation helpers ─────────────────────────────────────────────
-  const STREET_SUFFIX_RE = /\b(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd|Lane|Ln|Court|Ct|Way|Place|Pl|Circle|Cir|Parkway|Pkwy|Terrace|Ter|Trail|Trl)\b\.?/i;
-  const SQ_FT_RE = /square\s*f(?:eet|oot|t)|\bsq\.?\s*ft\b/i;
-  const MONEY_RE = /\$\s*\d|\d{1,3}(?:,\d{3})+(?:\.\d{2})?$/;
-  const SECTION_NUM_RE = /^(?:section|§)\s*\d+/i;
-  // Street suffix fragment for embedding in new RegExp() strings
-  const SF = '(?:Street|St\\.?|Avenue|Ave\\.?|Road|Rd\\.?|Drive|Dr\\.?|Boulevard|Blvd\\.?|Lane|Ln\\.?|Court|Ct\\.?|Way|Place|Pl\\.?|Circle|Cir\\.?|Parkway|Pkwy\\.?|Terrace|Ter\\.?|Trail|Trl\\.?)';
-  const UNIT_SUFFIX = '(?:\\s*,?\\s*(?:Apt|Suite|Ste|Unit|#)\\s*[A-Za-z0-9]+)?';
-
-  /** Confidence: high = suffix+zip, medium = suffix only, low = partial */
-  function addrConfidence(addr) {
-    const hasSuffix = STREET_SUFFIX_RE.test(addr);
-    const hasStateZip = /(?:TX|Texas)\s*\d{5}/.test(addr);
-    const hasZip = /\d{5}/.test(addr);
-    if (hasSuffix && (hasStateZip || hasZip)) return 'high';
-    if (hasSuffix) return 'medium';
-    return 'low';
-  }
-
-  /** Validate address candidate; logs rejection reason on failure */
-  function validateAddr(addr, label) {
-    if (!addr || addr.length < 6 || addr.length > 150) {
-      logger.debug('Lease extraction: address rejected — length', { label, len: addr?.length });
-      return false;
-    }
-    if (SQ_FT_RE.test(addr)) {
-      logger.debug('Lease extraction: address rejected — square footage', { label, candidate: addr });
-      return false;
-    }
-    if (MONEY_RE.test(addr)) {
-      logger.debug('Lease extraction: address rejected — monetary value', { label, candidate: addr });
-      return false;
-    }
-    if (SECTION_NUM_RE.test(addr)) {
-      logger.debug('Lease extraction: address rejected — section number', { label, candidate: addr });
-      return false;
-    }
-    if (!STREET_SUFFIX_RE.test(addr)) {
-      logger.debug('Lease extraction: address rejected — no street suffix', { label, candidate: addr });
-      return false;
-    }
-    if (!/^\d/.test(addr)) {
-      logger.debug('Lease extraction: address rejected — no leading number', { label, candidate: addr });
-      return false;
-    }
-    if (addr.trim().split(/\s+/).length < 3) {
-      logger.debug('Lease extraction: address rejected — fewer than 3 words', { label, candidate: addr });
-      return false;
-    }
-    return true;
-  }
-
   // Deposit amount
   if (sections && sections.length > 0) {
     const depositSection = sections.find((s) => s.topic === 'Security deposit');
@@ -186,58 +136,33 @@ function extractStructuredData(text, sections) {
   }
   if (extracted.deposit_amount) extracted.deposit_amount_confidence = 'high';
 
-  // Property address — tightened: requires street suffix, excludes sq ft / money / section numbers.
-  // Patterns ordered most-specific to least-specific to prevent landlord address bleed.
-  const propertyAddrPatterns = [
-    // 1. Explicit labeled section: "property address:" / "leased premises:" / "rental unit:"
-    new RegExp(
-      `(?:property\\s*address|leased\\s*premises\\s*(?:is|are)?|rental\\s*(?:property|unit|address))[:\\s]+` +
-      `([0-9]+\\s+[A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})`,
-      'gi'
-    ),
-    // 2. Section header "PROPERTY:" (requires colon — prevents matching "Property Management LLC")
-    new RegExp(
-      `\\bPROPERTY\\s*:[^\\n]{0,120}?([0-9]+\\s+[A-Za-z][A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})`,
-      'g'  // NOT 'i' — must be uppercase PROPERTY to avoid "ABC Property Management LLC" false match
-    ),
-    // 3. "leases/rents to tenant/lessee … <address>" — conveyance language
-    new RegExp(
-      `(?:leases?|rents?)\\s+to\\s+(?:tenant|lessee)[^.]{0,120}?([0-9]+\\s+[A-Za-z][A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})`,
-      'gi'
-    ),
-    // 4. Generic: street address followed unambiguously by TX city + zip
-    new RegExp(
-      `\\b([0-9]+\\s+[A-Za-z][A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})\\s*,\\s*[A-Z][a-z]+\\s*,\\s*(?:TX|Texas)`,
-      'gi'
-    ),
-  ];
-  for (const p of propertyAddrPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1]) {
-      const candidate = m[1].trim().replace(/\s+/g, ' ').replace(/[,;:]+$/, '').trim();
-      logger.debug('Lease extraction: property_address candidate', { candidate });
-      if (validateAddr(candidate, 'property_address')) {
-        extracted.property_address = candidate;
-        extracted.property_address_confidence = addrConfidence(candidate);
-        break;
-      }
-    }
+  // Property address — multi-candidate scoring via extractAddressFromText.
+  // Pass raw text (with newlines) so multi-line block capture works correctly.
+  const propAddr = extractAddressFromText(text);
+  if (propAddr.property_street) {
+    extracted.property_address       = propAddr.property_street;   // form field name
+    extracted.property_address_full  = propAddr.property_address_full;
+    extracted.property_address_confidence = propAddr.property_address_confidence;
   }
-
-  // City and ZIP
-  const cityPatterns = [
-    /,\s*([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
-    /([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
-    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*TX\s*(\d{5})/gi,
-  ];
-  for (const p of cityPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1] && m[2]) {
-      const city = m[1].trim();
-      if (city.length >= 3 && !['the', 'and', 'for', 'that', 'this'].includes(city.toLowerCase())) {
-        extracted.city = city; extracted.zip_code = m[2].trim(); break;
+  // City and ZIP — use address parse result first; fall back to standalone scan
+  if (propAddr.property_city) {
+    extracted.city     = propAddr.property_city;
+    extracted.zip_code = propAddr.property_zip || null;
+    if (propAddr.property_state) extracted.state = propAddr.property_state;
+  } else {
+    const cityPatterns = [
+      /,\s*([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+      /([A-Za-z][A-Za-z\s]{1,30}),\s*(?:TX|Texas)\s*(\d{5}(?:-\d{4})?)/gi,
+      /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*TX\s*(\d{5})/gi,
+    ];
+    for (const p of cityPatterns) {
+      p.lastIndex = 0;
+      const m = p.exec(normalized);
+      if (m && m[1] && m[2]) {
+        const city = m[1].trim();
+        if (city.length >= 3 && !['the', 'and', 'for', 'that', 'this'].includes(city.toLowerCase())) {
+          extracted.city = city; extracted.zip_code = m[2].trim(); break;
+        }
       }
     }
   }
@@ -321,60 +246,18 @@ function extractStructuredData(text, sections) {
     }
   }
 
-  // Landlord address — structured: { street, city, state, zip }
-  // Looks for sections labeled "Landlord/Owner/Management Address" or "Notice to Landlord".
-  const landlordAddrPatterns = [
-    // Labeled block: "Landlord Address: 456 Oak Ave, Austin, TX 78702"
-    new RegExp(
-      `(?:landlord|lessor|owner|management|notice\\s+to\\s+(?:landlord|owner|lessor))\\s*(?:address|contact|information)?[:\\s]+` +
-      `([0-9]+\\s+[A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})`,
-      'gi'
-    ),
-    // Inline: "landlord ... located at 456 Oak Ave ..."
-    new RegExp(
-      `(?:landlord|lessor|owner|management)[^.]{0,60}?(?:address|located\\s+at)[:\\s]+` +
-      `([0-9]+\\s+[A-Za-z0-9\\s#.,'-]*?${SF}${UNIT_SUFFIX})`,
-      'gi'
-    ),
-  ];
-  for (const p of landlordAddrPatterns) {
-    p.lastIndex = 0;
-    const m = p.exec(normalized);
-    if (m && m[1]) {
-      const streetCandidate = m[1].trim().replace(/\s+/g, ' ').replace(/[,;:]+$/, '').trim();
-      logger.debug('Lease extraction: landlord_address candidate', { candidate: streetCandidate });
-
-      if (validateAddr(streetCandidate, 'landlord_address')) {
-        // Check for city/state/zip embedded inside the captured street
-        const embedded = streetCandidate.match(/,\s*([A-Za-z][A-Za-z\s]{1,25}?)\s*,\s*(TX|Texas)\s*(\d{5}(?:-\d{4})?)/i);
-        let street = streetCandidate;
-        let city = null;
-        let state = null;
-        let zip = null;
-
-        if (embedded) {
-          street = streetCandidate.slice(0, embedded.index).trim();
-          city   = embedded[1].trim();
-          state  = 'TX';
-          zip    = embedded[3].trim();
-        } else {
-          // Look in the 100 chars immediately after the match
-          const after = normalized.slice(m.index + m[0].length, m.index + m[0].length + 100);
-          const trailing = after.match(/,?\s*([A-Za-z][A-Za-z\s]{1,25}?)\s*,\s*(TX|Texas)\s*(\d{5}(?:-\d{4})?)/i);
-          if (trailing) {
-            city  = trailing[1].trim();
-            state = 'TX';
-            zip   = trailing[3].trim();
-          }
-        }
-
-        extracted.landlord_address = { street, city, state, zip };
-        extracted.landlord_address_confidence = addrConfidence(
-          zip ? `${street}, ${city}, TX ${zip}` : street
-        );
-        break;
-      }
-    }
+  // Landlord notice address — structured: { street, city, state, zip }
+  // Delegated to extractLandlordNoticeAddress for anchor-based multi-candidate scoring.
+  const landlordAddr = extractLandlordNoticeAddress(text);
+  if (landlordAddr.landlord_notice_street) {
+    extracted.landlord_address = {
+      street: landlordAddr.landlord_notice_street,
+      city:   landlordAddr.landlord_notice_city,
+      state:  landlordAddr.landlord_notice_state,
+      zip:    landlordAddr.landlord_notice_zip,
+    };
+    // Confidence: high if zip present, medium if street-only
+    extracted.landlord_address_confidence = landlordAddr.landlord_notice_zip ? 'high' : 'medium';
   }
 
   // County
