@@ -78,7 +78,7 @@ async function saveCase(caseId, payload) {
     paymentStatus: 'pending',
     stripeSessionId: null,
     paidAt: null,
-    amount: 1999, // cents
+    amount: 4999, // cents
     leaseText: null,
     leasePageMarkers: null,
     analysisReport: null,

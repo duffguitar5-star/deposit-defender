@@ -1,0 +1,239 @@
+{
+  "report_metadata": {
+    "case_id": null,
+    "jurisdiction": "TX",
+    "generated_at": "2026-02-20T17:33:03.997Z",
+    "report_version": "2.0"
+  },
+  "case_strength": {
+    "case_strength_score": 8,
+    "leverage_score": 8,
+    "leverage_grade": "F",
+    "strategic_position": "UNCERTAIN",
+    "win_probability": 7,
+    "evidence_quality": "weak",
+    "bad_faith_indicators": [],
+    "evidence_matrix": {
+      "overall_strength": "weak",
+      "items": [
+        {
+          "type": "lease_document",
+          "present": true,
+          "strength": "strong",
+          "critical": true
+        },
+        {
+          "type": "forwarding_address_proof",
+          "present": false,
+          "strength": null,
+          "critical": true
+        },
+        {
+          "type": "communication_trail",
+          "present": false,
+          "strength": null,
+          "critical": false
+        },
+        {
+          "type": "move_out_photos",
+          "present": false,
+          "strength": null,
+          "critical": false
+        },
+        {
+          "type": "deposit_payment_proof",
+          "present": true,
+          "strength": "strong",
+          "critical": true
+        }
+      ]
+    }
+  },
+  "recovery_estimate": {
+    "deposit_amount": "$1,000",
+    "pet_deposit_amount": null,
+    "total_deposit": "$1,000",
+    "amount_already_returned": null,
+    "amount_still_owed": "$1,000",
+    "best_case": "$1,000",
+    "likely_case": "$250",
+    "worst_case": "$0",
+    "statutory_penalty": "$0",
+    "statutory_penalty_basis": null,
+    "probability_distribution": {
+      "full_recovery": 5,
+      "partial_recovery": 30,
+      "no_recovery": 65
+    },
+    "confidence_note": "Case strength is limited based on information provided. Additional facts may change this assessment.",
+    "disclaimer": "These are informational estimates only. Actual recovery depends on many factors including court proceedings, landlord response, and specific facts. This is not legal advice."
+  },
+  "strategy": {
+    "recommended_action": "REVIEW_SITUATION",
+    "urgency": "LOW",
+    "rationale": "Based on the information provided, the specific situation does not yet point to a clear compliance issue. This may be because the 30-day deadline has not passed, a refund is in process, or additional facts are needed.",
+    "success_rate_note": "The information available does not indicate a clear violation at this time.",
+    "timeline": "Depends on situation",
+    "cost_estimate": "$0",
+    "next_steps": [
+      {
+        "step": 1,
+        "action": "Confirm whether the 30-day deadline has passed from your forwarding address delivery date",
+        "deadline": "Now",
+        "notes": "Under § 92.107, the clock runs from when the landlord receives your forwarding address."
+      },
+      {
+        "step": 2,
+        "action": "Document any communications you have with the landlord about your deposit",
+        "deadline": "Ongoing",
+        "notes": "Keep records of all communications in case the situation changes."
+      }
+    ],
+    "if_no_response": "If circumstances change (deadline passes, no refund received), revisit this analysis.",
+    "escalation_path": {
+      "phase_1": "Monitor timeline and document communications",
+      "phase_2": "Re-evaluate if deadline passes without action from landlord"
+    }
+  },
+  "damage_defense": {
+    "potential_claims_detected": false,
+    "total_defenses": 1,
+    "overall_defense_strength": "LIMITED",
+    "defenses": [
+      {
+        "claim_type": "burden_of_proof",
+        "title": "Landlord Must Prove Claims",
+        "defense_strength": "STRONG",
+        "statute": "Tex. Prop. Code §§ 92.104, 92.109",
+        "key_point": "Under Texas law, a landlord who withholds or deducts from a deposit must provide a written itemized list of deductions (§ 92.104). The burden is on the landlord to document and justify each charge. General or vague claims without itemization or supporting receipts are difficult to enforce.",
+        "what_to_ask_landlord": [
+          "Please provide a written, itemized list of all deductions with specific amounts",
+          "Please provide receipts for any repairs or professional services charged",
+          "Please provide before and after photos documenting the claimed damage"
+        ],
+        "evidence_helpful": [
+          "All documentation showing you left the property in reasonable condition",
+          "Lease agreement showing what you agreed to"
+        ]
+      }
+    ],
+    "strategic_note": "No specific damage concerns detected from your notes. The burden-of-proof defense applies to any deductions the landlord may claim.",
+    "disclaimer": "These defense points are informational only and based on general principles. Specific legal strategies should be discussed with a licensed Texas attorney."
+  },
+  "timeline": {
+    "move_out_date": "2026-02-01",
+    "days_since_move_out": 19,
+    "past_30_days": false,
+    "deadline_date": null,
+    "days_remaining_to_deadline": 11
+  },
+  "compliance_checklist": {
+    "deposit_returned": false,
+    "itemization_provided": false,
+    "refund_within_30_days": false,
+    "forwarding_address_provided": false
+  },
+  "leverage_points": [
+    {
+      "rank": 1,
+      "point_id": "no_forwarding_address",
+      "title": "Forwarding Address Not Yet Provided — 30-Day Clock May Not Have Started",
+      "why_this_matters": "Texas Property Code § 92.107 indicates that a landlord's obligation to return a deposit is tied to receiving the tenant's forwarding address. If you have not provided a forwarding address in writing, the 30-day refund deadline may not yet have started. Sending your address now creates a clear paper trail and starts the clock.",
+      "supporting_facts": [
+        {
+          "fact": "Move-out date: 2026-02-01",
+          "source": "tenant_intake"
+        },
+        {
+          "fact": "Security deposit: $1,000",
+          "source": "tenant_intake"
+        },
+        {
+          "fact": "Forwarding address not yet provided to landlord in writing",
+          "source": "tenant_intake"
+        }
+      ],
+      "statute_citations": [
+        {
+          "rule_id": "92.107",
+          "citation": "Tex. Prop. Code § 92.107",
+          "title": "Tenant's Forwarding Address"
+        },
+        {
+          "rule_id": "92.103",
+          "citation": "Tex. Prop. Code § 92.103",
+          "title": "Obligation to Refund"
+        }
+      ],
+      "recommended_steps": [
+        {
+          "action": "send_forwarding_address_now",
+          "description": "Send your forwarding address today via certified mail with return receipt. Include your full name, the former property address, your move-out date (2026-02-01), and your new mailing address. Keep the certified mail receipt—it documents when you sent it and when the landlord received it."
+        },
+        {
+          "action": "note_30_day_start",
+          "description": "The 30-day deadline runs from when the landlord receives your forwarding address. Note the delivery date on your certified mail receipt and count 30 days from that date. If no refund or itemization arrives by day 30, a written demand would be appropriate."
+        }
+      ],
+      "severity": "medium"
+    }
+  ],
+  "statutory_references": [
+    {
+      "citation": "Tex. Prop. Code § 92.101",
+      "title": "Security Deposit",
+      "summary": "Defines what constitutes a security deposit under Texas law.",
+      "url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.101"
+    },
+    {
+      "citation": "Tex. Prop. Code § 92.103",
+      "title": "Obligation to Refund",
+      "summary": "Establishes the 30-day timeline for returning deposits or providing itemization.",
+      "url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.103"
+    },
+    {
+      "citation": "Tex. Prop. Code § 92.107",
+      "title": "Tenant's Forwarding Address",
+      "summary": "Addresses the requirement for tenant to provide forwarding address.",
+      "url": "https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.107"
+    }
+  ],
+  "procedural_steps": [
+    {
+      "step_number": 1,
+      "title": "Gather Your Documents",
+      "description": "Collect everything related to your rental in one place: (1) your signed lease, (2) move-in condition report or photos, (3) move-out photos, (4) deposit payment receipt, (5) any emails, texts, or letters with your landlord, (6) proof of forwarding address delivery if sent.",
+      "category": "documentation",
+      "checklist": [
+        "Lease agreement",
+        "Move-in photos or condition report",
+        "Move-out photos",
+        "Deposit payment receipt",
+        "All landlord communications (emails, texts, letters)",
+        "Forwarding address proof (certified mail receipt if applicable)"
+      ],
+      "resources": []
+    },
+    {
+      "step_number": 2,
+      "title": "Send Your Forwarding Address",
+      "description": "Send your forwarding address today via certified mail with return receipt. Include your full name, the former property address, your move-out date (2026-02-01), and your new mailing address. Keep the certified mail receipt—it documents when you sent it and when the landlord received it.",
+      "category": "communication",
+      "checklist": [],
+      "resources": []
+    },
+    {
+      "step_number": 3,
+      "title": "Mark the 30-Day Start Date",
+      "description": "The 30-day deadline runs from when the landlord receives your forwarding address. Note the delivery date on your certified mail receipt and count 30 days from that date. If no refund or itemization arrives by day 30, a written demand would be appropriate.",
+      "category": "planning",
+      "checklist": [],
+      "resources": []
+    }
+  ],
+  "disclaimers": {
+    "primary": "This report is provided for informational and document preparation purposes only. It does not constitute legal advice and does not create an attorney-client relationship. For advice specific to your legal situation, consult a licensed Texas attorney.",
+    "jurisdiction": "This analysis applies Texas law only (Tex. Prop. Code § 92.101 et seq.).",
+    "estimates": "Recovery estimates and win probability figures are informational tools only based on general case factors. They do not guarantee any outcome."
+  }
+}

@@ -46,5 +46,6 @@
   "devDependencies": {
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.33"
-  }
+  },
+  "proxy": "http://localhost:5000"
 }

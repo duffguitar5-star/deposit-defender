@@ -1,16 +1,18 @@
 /**
- * Issue Detectors
+ * Issue Detectors (V1 Core — 4 detectors)
  *
- * Detects issues from case data and produces enriched leverage points
- * with statute citations, lease clause links, and procedural recommendations.
+ * Detects compliance issues from case data and produces enriched leverage points.
+ * Each detector evaluates one specific scenario and returns structured output.
  *
- * IMPORTANT: All outputs use informational language only.
- * No legal advice or conclusions.
+ * Removed in V1: within_30_days_no_response, cleaning_deduction_concern,
+ *                lease_extended_timeline (lease extraction removed)
+ *
+ * IMPORTANT: All outputs use informational language only. Not legal advice.
  */
 
 const path = require('path');
 const fs = require('fs');
-const { parseISO, differenceInCalendarDays, addDays, format, isValid } = require('date-fns');
+const { parseISO, addDays, format, isValid } = require('date-fns');
 const { utcToZonedTime } = require('date-fns-tz');
 const logger = require('./logger');
 
@@ -18,18 +20,12 @@ const logger = require('./logger');
 const rulesPath = path.join(__dirname, '..', '..', '..', 'ai', 'tx_security_deposit_rules.json');
 const TX_RULES = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
 
-/**
- * Severity levels for issues
- */
-const SEVERITY = {
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low',
-};
+const SEVERITY = { HIGH: 'high', MEDIUM: 'medium', LOW: 'low' };
 
-/**
- * Format a currency amount for display
- */
+// ─────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────
+
 function formatCurrency(amount) {
   if (!amount) return '$0';
   const num = parseFloat(String(amount).replace(/[^0-9.]/g, ''));
@@ -37,530 +33,386 @@ function formatCurrency(amount) {
   return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-/**
- * Calculate deadline date with timezone-aware calendar day arithmetic
- * Uses Central Time (America/Chicago) for Texas-based calculations
- */
+function parseRawAmount(str) {
+  if (!str) return null;
+  const match = String(str).match(/[\d,]+\.?\d*/);
+  return match ? parseFloat(match[0].replace(/,/g, '')) : null;
+}
+
 function calculateDeadlineDate(moveOutDate, daysToAdd) {
   if (!moveOutDate) return 'unknown';
-
   try {
-    // Parse as ISO date string (YYYY-MM-DD)
     let date = parseISO(moveOutDate);
-
-    // If invalid, try Date constructor fallback
-    if (!isValid(date)) {
-      date = new Date(moveOutDate);
-      if (!isValid(date)) return 'unknown';
-    }
-
-    // Convert to Central Time (Texas timezone)
+    if (!isValid(date)) date = new Date(moveOutDate);
+    if (!isValid(date)) return 'unknown';
     const texasTime = utcToZonedTime(date, 'America/Chicago');
-
-    // Add calendar days
-    const deadline = addDays(texasTime, daysToAdd);
-
-    // Format consistently
-    return format(deadline, 'MMM d, yyyy');
-  } catch (error) {
-    logger.error('Date calculation error', { error, fromDate, daysToAdd });
+    return format(addDays(texasTime, daysToAdd), 'MMM d, yyyy');
+  } catch {
     return 'unknown';
   }
 }
 
-/**
- * Issue detector definitions
- * Each detector evaluates case data and produces an enriched issue if triggered
- *
- * Design principles:
- * - Titles are specific to case facts (include amounts, dates when relevant)
- * - "Why this matters" is persuasive and explains practical implications
- * - Each issue includes statute + lease citations (or explicit none_found)
- * - Recommended steps are concrete with specific actions
- * - No legal advice language; informational only
- */
+// ─────────────────────────────────────────────
+// Evaluation Context
+// Normalizes all intake booleans in one place
+// ─────────────────────────────────────────────
+class EvaluationContext {
+  constructor(intake, timeline) {
+    this.intake = intake;
+    this.timeline = timeline;
+
+    // Raw values for display
+    this.depositAmount = intake.security_deposit_information?.deposit_amount;
+    this.petDepositAmount = intake.security_deposit_information?.pet_deposit_amount || null;
+    this.amountReturned = intake.security_deposit_information?.amount_returned;
+    this.forwardingDate = intake.move_out_information?.forwarding_address_date;
+    this.moveOutDate = intake.move_out_information?.move_out_date;
+    this.tenantNotes = intake.additional_notes?.tenant_notes || '';
+
+    // Timeline
+    this.daysSinceMoveOut = timeline?.days_since_move_out ?? 0;
+    this.past30Days = timeline?.past_30_days === true;
+
+    // Canonical booleans — normalized from various input formats
+    const depositRaw = intake.security_deposit_information?.deposit_returned;
+    this.depositReturned = depositRaw === true || depositRaw === 'yes' || depositRaw === 'partial';
+    this.isFullyReturned = depositRaw === 'yes';
+    this.depositReturnedRaw = depositRaw;
+
+    const itemizationRaw = intake.post_move_out_communications?.itemized_deductions_received;
+    this.itemizationProvided = itemizationRaw === true || itemizationRaw === 'yes';
+
+    const forwardingRaw = intake.move_out_information?.forwarding_address_provided;
+    this.forwardingAddressProvided = forwardingRaw === true || forwardingRaw === 'yes';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Core Detectors (4 for V1)
+// ─────────────────────────────────────────────
 const ISSUE_DETECTORS = [
+
+  // ─────────────────────────────────────────────────────────────
+  // DETECTOR 1: Deadline missed — no return AND no itemization
+  // Highest priority: clearest statutory violation
+  // ─────────────────────────────────────────────────────────────
   {
     id: 'deadline_missed_full_deposit',
     severity: SEVERITY.HIGH,
     rank_weight: 100,
-    title: 'Landlord has not returned deposit or provided itemization',
 
-    evaluate: (ctx) => {
-      // Only fire if: past 30 days, no refund at all, AND no itemization
-      return ctx.past30Days &&
-             ctx.depositReturned === 'no' &&
-             ctx.itemizedReceived === 'no';
-    },
+    evaluate: (ctx) =>
+      ctx.past30Days === true &&
+      ctx.depositReturned === false &&
+      ctx.itemizationProvided === false,
 
     build: (ctx) => {
       const depositDisplay = formatCurrency(ctx.depositAmount);
       const daysOver = ctx.daysSinceMoveOut - 30;
 
       return {
+        title: `30-Day Deadline Passed — No Return or Itemization of ${depositDisplay} Deposit`,
         why_this_matters:
           `Your landlord has held your ${depositDisplay} deposit for ${ctx.daysSinceMoveOut} days ` +
-          `without returning it or explaining why. Texas Property Code § 92.103 states landlords must ` +
-          `act within 30 days—that deadline passed ${daysOver} days ago. ` +
-          `Under § 92.109, a landlord who fails to meet this deadline may forfeit the right to ` +
-          `withhold any portion of the deposit and could be liable for additional amounts.`,
+          `without returning it or providing any written explanation of deductions. ` +
+          `Texas Property Code § 92.103 requires landlords to act within 30 calendar days—` +
+          `that deadline passed ${daysOver} day${daysOver !== 1 ? 's' : ''} ago. ` +
+          `Under § 92.109, a landlord who fails to meet this deadline may lose the right to ` +
+          `withhold any portion of the deposit and may be liable for additional amounts.`,
 
         supporting_facts: [
-          { fact: `You moved out on ${ctx.moveOutDate}`, source: 'tenant_intake' },
-          { fact: `${ctx.daysSinceMoveOut} days have passed (30-day deadline exceeded by ${daysOver} days)`, source: 'computed' },
-          { fact: `Your deposit was ${depositDisplay}`, source: 'tenant_intake' },
+          { fact: `Move-out date: ${ctx.moveOutDate}`, source: 'tenant_intake' },
+          { fact: `${ctx.daysSinceMoveOut} days have elapsed (deadline exceeded by ${daysOver} days)`, source: 'computed' },
+          { fact: `Security deposit: ${depositDisplay}`, source: 'tenant_intake' },
           { fact: 'No refund received', source: 'tenant_intake' },
           { fact: 'No itemized deduction list received', source: 'tenant_intake' },
-          ctx.forwardingProvided === 'yes'
-            ? { fact: `You provided a forwarding address${ctx.forwardingDate ? ' on ' + ctx.forwardingDate : ''}`, source: 'tenant_intake' }
+          ctx.forwardingAddressProvided
+            ? { fact: `Forwarding address provided${ctx.forwardingDate ? ' on ' + ctx.forwardingDate : ''}`, source: 'tenant_intake' }
             : null,
         ].filter(Boolean),
 
         statute_citations: ['92.103', '92.104', '92.109'],
 
-        lease_citations: ctx.findLeaseClausesByTopic(['security_deposit', 'move_out', 'deductions']),
-
         recommended_steps: [
           {
             action: 'send_written_demand',
             description:
-              `Send a written request to your landlord via certified mail (return receipt requested). ` +
-              `Include: (1) your name and former address, (2) your move-out date (${ctx.moveOutDate}), ` +
-              `(3) the deposit amount (${depositDisplay}), (4) that ${ctx.daysSinceMoveOut} days have passed, ` +
-              `(5) your current mailing address, and (6) a request for immediate return of the full deposit ` +
-              `or a written itemization of any claimed deductions. Keep a copy of everything you send.`,
+              `Send a written demand letter to your landlord via certified mail (return receipt requested). ` +
+              `Include: your name, former property address, move-out date (${ctx.moveOutDate}), ` +
+              `deposit amount (${depositDisplay}), your current mailing address, and a request for ` +
+              `immediate return of the full deposit or a complete written itemization of any deductions. ` +
+              `Keep copies of the letter and your certified mail receipt.`,
           },
           {
             action: 'document_timeline',
             description:
-              `Create a simple written timeline: move-out date, when you gave your forwarding address, ` +
-              `any communications with the landlord, and today's date. This helps you (and anyone reviewing ` +
-              `your situation) see the full picture at a glance.`,
+              `Write out a simple timeline: your move-out date, when you provided your forwarding ` +
+              `address, any communications with your landlord, and today's date. This is important ` +
+              `documentation if you need to escalate.`,
           },
         ],
       };
     },
   },
 
+  // ─────────────────────────────────────────────────────────────
+  // DETECTOR 2: Partial return received but no written itemization
+  // ─────────────────────────────────────────────────────────────
   {
     id: 'deadline_missed_no_itemization_only',
     severity: SEVERITY.HIGH,
     rank_weight: 90,
-    title: 'Partial refund received but no itemization provided',
 
     evaluate: (ctx) => {
-      // Fire if: past 30 days, partial refund, but NO itemization
-      // (The full-deposit detector handles the "no refund" case)
-      return ctx.past30Days &&
-             ctx.depositReturned === 'partial' &&
-             ctx.itemizedReceived === 'no';
+      const depositNum = parseRawAmount(ctx.depositAmount);
+      const returnedNum = parseRawAmount(ctx.amountReturned);
+      const isPartialRefund =
+        ctx.depositReturnedRaw === 'partial' ||
+        (ctx.depositReturned && returnedNum !== null && depositNum !== null && returnedNum < depositNum);
+      return ctx.past30Days === true && isPartialRefund && ctx.itemizationProvided === false;
     },
 
     build: (ctx) => {
       const depositDisplay = formatCurrency(ctx.depositAmount);
       const returnedDisplay = formatCurrency(ctx.amountReturned);
-      const withheldDisplay = calculateWithheld(ctx.depositAmount, ctx.amountReturned);
+      const depositNum = parseRawAmount(ctx.depositAmount) || 0;
+      const returnedNum = parseRawAmount(ctx.amountReturned) || 0;
+      const withheld = formatCurrency(depositNum - returnedNum);
 
       return {
+        title: `Partial Refund of ${returnedDisplay} Received — ${withheld} Withheld Without Itemization`,
         why_this_matters:
           `Your landlord returned ${returnedDisplay} of your ${depositDisplay} deposit but kept ` +
-          `${withheldDisplay}—and never explained why. Texas Property Code § 92.104 requires landlords ` +
-          `to provide a written, itemized list of deductions when keeping any part of a deposit. ` +
-          `Without this itemization, you have no way to verify whether the deductions were legitimate. ` +
-          `Under § 92.109, failure to provide itemization may mean the landlord forfeits the right ` +
-          `to keep any of your deposit.`,
+          `${withheld}—without providing a written explanation of what the deductions were for. ` +
+          `Texas Property Code § 92.104 requires landlords to provide a written, itemized list of ` +
+          `deductions when keeping any portion of a deposit. Without this itemization, you cannot ` +
+          `verify whether the deductions were legitimate. Under § 92.109, failure to provide ` +
+          `proper itemization may affect the landlord's right to retain those funds.`,
 
         supporting_facts: [
-          { fact: `You moved out on ${ctx.moveOutDate}`, source: 'tenant_intake' },
+          { fact: `Move-out date: ${ctx.moveOutDate}`, source: 'tenant_intake' },
           { fact: `Original deposit: ${depositDisplay}`, source: 'tenant_intake' },
           { fact: `Amount returned: ${returnedDisplay}`, source: 'tenant_intake' },
-          { fact: `Amount withheld: ${withheldDisplay}`, source: 'computed' },
+          { fact: `Amount withheld without explanation: ${withheld}`, source: 'computed' },
           { fact: 'No itemized deduction list received', source: 'tenant_intake' },
-          { fact: `${ctx.daysSinceMoveOut} days since move-out (30-day deadline passed)`, source: 'computed' },
+          { fact: `${ctx.daysSinceMoveOut} days since move-out (past 30-day deadline)`, source: 'computed' },
         ],
 
         statute_citations: ['92.104', '92.109'],
-
-        lease_citations: ctx.findLeaseClausesByTopic(['security_deposit', 'deductions']),
 
         recommended_steps: [
           {
             action: 'request_itemization_letter',
             description:
-              `Send a written request via certified mail asking for the itemized list of deductions. ` +
-              `State that you received ${returnedDisplay} but have not received any explanation for ` +
-              `the ${withheldDisplay} withheld. Reference Texas Property Code § 92.104. ` +
-              `Keep a copy and the certified mail receipt.`,
+              `Send a written request for the itemized list of deductions via certified mail. ` +
+              `State that you received ${returnedDisplay} but have not received any written ` +
+              `explanation for the ${withheld} withheld. Reference Texas Property Code § 92.104. ` +
+              `Keep copies of your request and the certified mail receipt.`,
           },
           {
             action: 'gather_move_out_evidence',
             description:
-              `Collect any photos you took at move-out, your move-in condition report, and any ` +
-              `communications with the landlord about the property's condition. These may help you ` +
-              `evaluate whether any future itemization is reasonable.`,
+              `Gather any photos from move-out, your move-in condition report, and any communications ` +
+              `with the landlord about the property's condition. These will help you evaluate whether ` +
+              `any itemization the landlord eventually provides is reasonable.`,
           },
         ],
       };
     },
   },
 
+  // ─────────────────────────────────────────────────────────────
+  // DETECTOR 2.5: Approaching deadline — deposit withheld, no itemization
+  // Fires within the 30-day window when deposit is clearly being held.
+  // HIGH severity because a § 92.103 violation is imminent and documentable.
+  // ─────────────────────────────────────────────────────────────
   {
-    id: 'within_30_days_no_response',
-    severity: SEVERITY.MEDIUM,
-    rank_weight: 60,
-    title: 'Still within 30-day window—no response yet',
+    id: 'within_30_days_deposit_withheld',
+    severity: SEVERITY.HIGH,
+    rank_weight: 95,
 
-    evaluate: (ctx) => {
-      // Within 30 days, no refund, no itemization
-      return !ctx.past30Days &&
-             ctx.daysSinceMoveOut >= 15 &&
-             ctx.depositReturned === 'no' &&
-             ctx.itemizedReceived === 'no';
-    },
+    evaluate: (ctx) =>
+      ctx.past30Days === false &&
+      ctx.daysSinceMoveOut >= 1 &&
+      ctx.depositReturned === false &&
+      ctx.itemizationProvided === false,
 
     build: (ctx) => {
       const depositDisplay = formatCurrency(ctx.depositAmount);
-      const daysRemaining = 30 - ctx.daysSinceMoveOut;
+      const daysRemaining = Math.max(0, 30 - ctx.daysSinceMoveOut);
+      const deadlineDate = calculateDeadlineDate(ctx.moveOutDate, 30);
 
       return {
+        title: `${depositDisplay} Deposit Withheld — ${daysRemaining} Day${daysRemaining !== 1 ? 's' : ''} Until Statutory Deadline`,
         why_this_matters:
-          `You moved out ${ctx.daysSinceMoveOut} days ago and haven't heard anything about your ` +
-          `${depositDisplay} deposit. The landlord still has ${daysRemaining} days to comply with ` +
-          `the 30-day deadline under Texas Property Code § 92.103. While the deadline hasn't passed yet, ` +
-          `now is a good time to make sure your landlord has your correct forwarding address and ` +
-          `to document that you're waiting.`,
+          `Your landlord has not returned your ${depositDisplay} deposit or provided any written ` +
+          `explanation of deductions. Texas Property Code § 92.103 gives landlords 30 calendar days ` +
+          `to return the deposit or provide a written itemization of deductions. That deadline is ` +
+          `${deadlineDate}—${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} from now. ` +
+          `Under § 92.109, a landlord who fails to meet this deadline in bad faith may lose the ` +
+          `right to withhold any portion of the deposit and may face additional liability.`,
 
         supporting_facts: [
-          { fact: `You moved out on ${ctx.moveOutDate}`, source: 'tenant_intake' },
-          { fact: `${ctx.daysSinceMoveOut} days elapsed, ${daysRemaining} days until deadline`, source: 'computed' },
-          { fact: `Deposit amount: ${depositDisplay}`, source: 'tenant_intake' },
-          ctx.forwardingProvided === 'yes'
-            ? { fact: 'Forwarding address provided', source: 'tenant_intake' }
-            : { fact: 'Forwarding address not yet provided', source: 'tenant_intake' },
-        ],
+          { fact: `Move-out date: ${ctx.moveOutDate}`, source: 'tenant_intake' },
+          { fact: `${ctx.daysSinceMoveOut} days elapsed — statutory deadline: ${deadlineDate}`, source: 'computed' },
+          { fact: `Security deposit: ${depositDisplay}`, source: 'tenant_intake' },
+          { fact: 'No refund received', source: 'tenant_intake' },
+          { fact: 'No itemized deduction list received', source: 'tenant_intake' },
+          ctx.forwardingAddressProvided
+            ? { fact: `Forwarding address provided${ctx.forwardingDate ? ' on ' + ctx.forwardingDate : ''}`, source: 'tenant_intake' }
+            : null,
+        ].filter(Boolean),
 
-        statute_citations: ['92.103', '92.107'],
-
-        lease_citations: ctx.findLeaseClausesByTopic(['security_deposit', 'forwarding_address']),
+        statute_citations: ['92.103', '92.104', '92.109'],
 
         recommended_steps: [
           {
             action: 'confirm_forwarding_address',
             description:
-              ctx.forwardingProvided === 'yes'
-                ? `You've provided a forwarding address. Consider sending a brief follow-up via email ` +
-                  `or text confirming your current address so there's no confusion.`
-                : `Send your forwarding address in writing (certified mail or email) immediately. ` +
-                  `The 30-day clock may not start until the landlord has this address.`,
+              `If you have not already done so, send your forwarding address to your landlord in ` +
+              `writing today—certified mail is best. Under § 92.107, your landlord's 30-day clock ` +
+              `runs from when they receive your forwarding address. Sending it now creates a clear ` +
+              `paper trail and ensures the deadline is unambiguous.`,
           },
           {
-            action: 'set_reminder',
+            action: 'document_timeline',
             description:
-              `Mark day 31 on your calendar (${calculateDeadlineDate(ctx.moveOutDate, 31)}). ` +
-              `If you haven't received your deposit or an itemization by then, the landlord has ` +
-              `missed the deadline.`,
+              `Write out a simple timeline now: your move-out date, when you provided your forwarding ` +
+              `address, any communications with your landlord, and the statutory deadline (${deadlineDate}). ` +
+              `If the deadline passes without a refund or itemization, this documentation will ` +
+              `support a written demand or small claims filing.`,
           },
         ],
       };
     },
   },
 
+  // ─────────────────────────────────────────────────────────────
+  // DETECTOR 3: Forwarding address not provided
+  // May affect when 30-day clock started
+  // ─────────────────────────────────────────────────────────────
   {
     id: 'no_forwarding_address',
     severity: SEVERITY.MEDIUM,
     rank_weight: 55,
-    title: 'Forwarding address not provided—deadline may not have started',
 
-    evaluate: (ctx) => {
-      return ctx.forwardingProvided === 'no' && ctx.depositReturned === 'no';
-    },
+    evaluate: (ctx) =>
+      ctx.forwardingAddressProvided === false && ctx.depositReturned === false,
 
     build: (ctx) => {
       const depositDisplay = formatCurrency(ctx.depositAmount);
 
       return {
+        title: 'Forwarding Address Not Yet Provided — 30-Day Clock May Not Have Started',
         why_this_matters:
-          `Texas Property Code § 92.107 says the 30-day deadline doesn't start until you give ` +
-          `your landlord a forwarding address in writing. Without this, your landlord may not ` +
-          `yet be obligated to return your ${depositDisplay} deposit. Providing this address ` +
-          `immediately starts the clock and creates a clear paper trail.`,
+          `Texas Property Code § 92.107 indicates that a landlord's obligation to return a deposit ` +
+          `is tied to receiving the tenant's forwarding address. If you have not provided a ` +
+          `forwarding address in writing, the 30-day refund deadline may not yet have started. ` +
+          `Sending your address now creates a clear paper trail and starts the clock.`,
 
         supporting_facts: [
-          { fact: `You moved out on ${ctx.moveOutDate}`, source: 'tenant_intake' },
-          { fact: `Deposit amount: ${depositDisplay}`, source: 'tenant_intake' },
-          { fact: 'No forwarding address provided yet', source: 'tenant_intake' },
+          { fact: `Move-out date: ${ctx.moveOutDate}`, source: 'tenant_intake' },
+          { fact: `Security deposit: ${depositDisplay}`, source: 'tenant_intake' },
+          { fact: 'Forwarding address not yet provided to landlord in writing', source: 'tenant_intake' },
         ],
 
         statute_citations: ['92.107', '92.103'],
-
-        lease_citations: ctx.findLeaseClausesByTopic(['forwarding_address', 'notice', 'security_deposit']),
 
         recommended_steps: [
           {
             action: 'send_forwarding_address_now',
             description:
               `Send your forwarding address today via certified mail with return receipt. ` +
-              `Include your full name, the rental property address, your move-out date (${ctx.moveOutDate}), ` +
-              `and your new mailing address. Keep the certified mail receipt—it proves when you sent it.`,
+              `Include your full name, the former property address, your move-out date (${ctx.moveOutDate}), ` +
+              `and your new mailing address. Keep the certified mail receipt—it documents ` +
+              `when you sent it and when the landlord received it.`,
           },
           {
             action: 'note_30_day_start',
             description:
-              `The 30-day deadline starts when the landlord receives your forwarding address. ` +
-              `Note the delivery date from your certified mail receipt and count 30 days from there.`,
+              `The 30-day deadline runs from when the landlord receives your forwarding address. ` +
+              `Note the delivery date on your certified mail receipt and count 30 days from that date. ` +
+              `If no refund or itemization arrives by day 30, a written demand would be appropriate.`,
           },
         ],
       };
     },
   },
 
+  // ─────────────────────────────────────────────────────────────
+  // DETECTOR 4: Normal wear and tear concern
+  // Tenant notes suggest potential wear/tear dispute
+  // ─────────────────────────────────────────────────────────────
   {
     id: 'normal_wear_concern',
     severity: SEVERITY.MEDIUM,
     rank_weight: 70,
-    title: 'Possible normal wear and tear issue',
 
     evaluate: (ctx) => {
-      if (ctx.depositReturned !== 'no' && ctx.depositReturned !== 'partial') {
-        return false;
-      }
-      const wearTearKeywords = ['wear', 'tear', 'normal', 'carpet', 'paint', 'scuff', 'faded', 'age'];
-      const notesLower = (ctx.tenantNotes || '').toLowerCase();
-      return wearTearKeywords.some(kw => notesLower.includes(kw));
+      // Only relevant if deposit was not fully returned
+      if (ctx.isFullyReturned) return false;
+      const wearKeywords = ['wear', 'tear', 'carpet', 'paint', 'scuff', 'faded', 'age', 'old', 'normal'];
+      return wearKeywords.some(kw => ctx.tenantNotes.toLowerCase().includes(kw));
     },
 
     build: (ctx) => ({
+      title: 'Potential Normal Wear and Tear Dispute',
       why_this_matters:
-        `Your notes mention wear, carpet, paint, or similar issues. Texas Property Code § 92.104 ` +
-        `prohibits landlords from deducting for "normal wear and tear"—the gradual deterioration ` +
-        `that happens from ordinary use. Faded paint, minor carpet wear, and small scuffs typically ` +
-        `fall into this category. If your landlord tries to charge you for these, you may have ` +
-        `grounds to dispute those deductions.`,
+        `Your notes mention wear, carpet, paint, or similar items. Texas Property Code § 92.104(a) ` +
+        `states that landlords cannot deduct for "normal wear and tear"—the gradual deterioration ` +
+        `from ordinary, reasonable use. Faded paint, minor carpet wear from foot traffic, small ` +
+        `scuff marks, and standard picture-hanging nail holes generally fall into this category. ` +
+        `If your landlord charges for these items, you may have grounds to dispute those deductions.`,
 
       supporting_facts: [
-        { fact: 'Your notes reference wear, carpet, paint, or similar concerns', source: 'tenant_intake' },
-        { fact: `Deposit status: ${ctx.depositReturned === 'partial' ? 'Partially returned' : 'Not returned'}`, source: 'tenant_intake' },
+        { fact: 'Your notes reference wear, carpet, paint, or similar items', source: 'tenant_intake' },
+        {
+          fact: ctx.depositReturnedRaw === 'partial'
+            ? 'Deposit was partially returned'
+            : 'Deposit was not returned',
+          source: 'tenant_intake'
+        },
       ],
 
       statute_citations: ['92.104'],
-
-      lease_citations: ctx.findLeaseClausesByTopic(['normal_wear_and_tear', 'damages', 'cleaning', 'carpet_painting']),
 
       recommended_steps: [
         {
           action: 'compare_photos',
           description:
-            `Gather your move-in photos (or condition report) and any move-out photos. ` +
-            `Compare them side-by-side. Minor changes from living in a unit for months or years ` +
-            `are typically normal wear—not damage you should pay for.`,
+            `Compare your move-in photos (or condition report, if you have one) with your move-out ` +
+            `photos. Changes from normal daily living over months or years are typically normal wear, ` +
+            `not damage you should pay for. Document this comparison in case you need it later.`,
         },
         {
           action: 'research_normal_wear',
           description:
-            `Texas courts and tenant resources have examples of normal wear vs. damage. ` +
-            `Generally: small nail holes, minor carpet wear paths, faded paint = normal wear. ` +
-            `Large holes, stains, burns, broken fixtures = possible damage.`,
-        },
-      ],
-    }),
-  },
-
-  {
-    id: 'cleaning_deduction_concern',
-    severity: SEVERITY.MEDIUM,
-    rank_weight: 65,
-    title: 'Cleaning charges may be questionable',
-
-    evaluate: (ctx) => {
-      if (ctx.depositReturned !== 'no' && ctx.depositReturned !== 'partial') {
-        return false;
-      }
-      const cleaningKeywords = ['cleaning', 'clean', 'dirty', 'filthy', 'maid', 'professional'];
-      const notesLower = (ctx.tenantNotes || '').toLowerCase();
-      return cleaningKeywords.some(kw => notesLower.includes(kw));
-    },
-
-    build: (ctx) => ({
-      why_this_matters:
-        `Your notes mention cleaning. Landlords can only charge for cleaning beyond normal wear—` +
-        `not routine cleaning that would happen between any tenants. If the unit was reasonably ` +
-        `clean when you left (swept, no trash, appliances wiped down), charges for "professional ` +
-        `cleaning" may not be justified. Check your lease for specific cleaning requirements.`,
-
-      supporting_facts: [
-        { fact: 'Your notes mention cleaning-related concerns', source: 'tenant_intake' },
-        { fact: `Deposit status: ${ctx.depositReturned === 'partial' ? 'Partially returned' : 'Not returned'}`, source: 'tenant_intake' },
-      ],
-
-      statute_citations: ['92.104'],
-
-      lease_citations: ctx.findLeaseClausesByTopic(['cleaning', 'move_out']),
-
-      recommended_steps: [
-        {
-          action: 'check_lease_cleaning_clause',
-          description:
-            `Look for any lease clause about cleaning. Does it require "professional cleaning" ` +
-            `or just "broom clean"? What condition did you actually leave the unit in? ` +
-            `Take note of the specific language.`,
-        },
-        {
-          action: 'document_move_out_condition',
-          description:
-            `Gather any photos from move-out day. Did you clean before leaving? ` +
-            `Write down what you did (vacuumed, wiped counters, etc.) while it's fresh in your memory.`,
-        },
-      ],
-    }),
-  },
-
-  {
-    id: 'lease_extended_timeline',
-    severity: SEVERITY.MEDIUM,
-    rank_weight: 68,
-    title: 'Lease mentions a timeline longer than 30 days',
-
-    evaluate: (ctx) => {
-      const depositClauses = ctx.findLeaseClausesByTopic(['security_deposit']);
-      if (depositClauses === 'none_found') return false;
-      for (const clause of depositClauses) {
-        const dayMatch = clause.excerpt.match(/(\d+)\s*(?:day|days)/i);
-        if (dayMatch && parseInt(dayMatch[1], 10) > 30) {
-          ctx._leaseTimelineDays = parseInt(dayMatch[1], 10);
-          ctx._leaseTimelineClause = clause;
-          return true;
-        }
-      }
-      return false;
-    },
-
-    build: (ctx) => ({
-      why_this_matters:
-        `Your lease appears to reference a ${ctx._leaseTimelineDays}-day timeline for deposit matters. ` +
-        `However, Texas Property Code § 92.103 sets a 30-day deadline. Texas law generally takes ` +
-        `precedence over lease terms that try to give landlords more time. A lease cannot override ` +
-        `the statutory 30-day requirement.`,
-
-      supporting_facts: [
-        { fact: `Lease excerpt: "${ctx._leaseTimelineClause?.excerpt?.slice(0, 120)}..."`, source: 'lease_extraction' },
-        { fact: `Lease timeline: ${ctx._leaseTimelineDays} days`, source: 'lease_extraction' },
-        { fact: 'Texas Property Code: 30 days', source: 'statutory' },
-      ],
-
-      statute_citations: ['92.103'],
-
-      lease_citations: [{ ...ctx._leaseTimelineClause, is_conflict: true }],
-
-      recommended_steps: [
-        {
-          action: 'note_statutory_deadline',
-          description:
-            `Regardless of what your lease says, the 30-day deadline under Texas law applies. ` +
-            `Calculate 30 days from when you provided your forwarding address—that's your deadline.`,
+            `Texas courts and tenant resources distinguish normal wear from damage. Examples: ` +
+            `small nail holes, worn carpet paths, minor scuff marks = typically normal wear. ` +
+            `Large holes, burns, intentional damage, or excessive filth = potentially chargeable damage. ` +
+            `Keep this distinction in mind when reviewing any itemization you receive.`,
         },
       ],
     }),
   },
 ];
 
-/**
- * Evaluation context - provides helper methods to detectors
- */
-class EvaluationContext {
-  constructor(intake, timeline, leaseClauses) {
-    this.intake = intake;
-    this.timeline = timeline;
-    this.leaseClauses = leaseClauses || [];
-
-    // Extract commonly used values
-    this.depositReturned = intake.security_deposit_information?.deposit_returned;
-    this.depositAmount = intake.security_deposit_information?.deposit_amount;
-    this.amountReturned = intake.security_deposit_information?.amount_returned;
-    this.itemizedReceived = intake.post_move_out_communications?.itemized_deductions_received;
-    this.forwardingProvided = intake.move_out_information?.forwarding_address_provided;
-    this.forwardingDate = intake.move_out_information?.forwarding_address_date;
-    this.moveOutDate = intake.move_out_information?.move_out_date;
-    this.commMethods = intake.post_move_out_communications?.communication_methods_used || [];
-    this.tenantNotes = intake.additional_notes?.tenant_notes || '';
-
-    // Timeline values (support both nested current_status and flat formats)
-    this.daysSinceMoveOut = timeline?.current_status?.days_since_move_out
-      ?? timeline?.days_since_move_out
-      ?? 0;
-    this.past30Days = timeline?.current_status?.timeline_phase === 'past_30_days'
-      || timeline?.past_30_days === true;
-  }
-
-  /**
-   * Find lease clauses by topic
-   */
-  findLeaseClausesByTopic(topics) {
-    const matches = this.leaseClauses.filter(c => topics.includes(c.topic || c.clause_type));
-    if (matches.length === 0) {
-      return 'none_found';
-    }
-    return matches.map(c => ({
-      clause_id: c.item_id,
-      topic: c.topic || c.clause_type,
-      excerpt: c.excerpt,
-      source: c.source_context,
-    }));
-  }
-}
-
-/**
- * Run all issue detectors and return enriched leverage points
- */
-function detectIssues(intake, timeline, leaseClauses) {
-  const ctx = new EvaluationContext(intake, timeline, leaseClauses);
-  const detectedIssues = [];
-
-  // DEBUG: Log the normalized context object
-  logger.info('===== ISSUE DETECTOR DEBUG =====');
-  logger.info('Normalized Context Object:', {
-    depositReturned: ctx.depositReturned,
-    depositReturnedType: typeof ctx.depositReturned,
-    depositAmount: ctx.depositAmount,
-    amountReturned: ctx.amountReturned,
-    itemizedReceived: ctx.itemizedReceived,
-    itemizedReceivedType: typeof ctx.itemizedReceived,
-    past30Days: ctx.past30Days,
-    past30DaysType: typeof ctx.past30Days,
-    daysSinceMoveOut: ctx.daysSinceMoveOut,
-    moveOutDate: ctx.moveOutDate,
-    forwardingProvided: ctx.forwardingProvided,
-  });
-  logger.info('Timeline object:', timeline);
-  logger.info('Intake security_deposit_information:', intake?.security_deposit_information);
-  logger.info('Intake post_move_out_communications:', intake?.post_move_out_communications);
-  logger.info('================================');
-
-  // DEBUG: Log the exact condition for deadline_missed_full_deposit detector
-  const deadline_missed_detector = ISSUE_DETECTORS.find(d => d.id === 'deadline_missed_full_deposit');
-  if (deadline_missed_detector) {
-    const conditionResult = {
-      past30Days: ctx.past30Days,
-      'past30Days === true': ctx.past30Days === true,
-      depositReturned: ctx.depositReturned,
-      'depositReturned === "no"': ctx.depositReturned === 'no',
-      itemizedReceived: ctx.itemizedReceived,
-      'itemizedReceived === "no"': ctx.itemizedReceived === 'no',
-      OVERALL: ctx.past30Days && ctx.depositReturned === 'no' && ctx.itemizedReceived === 'no',
-    };
-    logger.info('deadline_missed_full_deposit condition check:', conditionResult);
-  }
+// ─────────────────────────────────────────────
+// Main detection function
+// ─────────────────────────────────────────────
+function detectIssues(intake, timeline) {
+  const ctx = new EvaluationContext(intake, timeline);
+  const detected = [];
 
   for (const detector of ISSUE_DETECTORS) {
     try {
       if (detector.evaluate(ctx)) {
-        const enrichedData = detector.build(ctx);
-
-        detectedIssues.push({
+        const data = detector.build(ctx);
+        detected.push({
           issue_id: detector.id,
           severity: detector.severity,
           rank_weight: detector.rank_weight,
-          title: detector.title,
-          ...enrichedData,
+          ...data,
         });
       }
     } catch (err) {
@@ -568,29 +420,26 @@ function detectIssues(intake, timeline, leaseClauses) {
     }
   }
 
-  // Sort by rank_weight descending
-  detectedIssues.sort((a, b) => b.rank_weight - a.rank_weight);
+  // Sort by rank weight descending
+  detected.sort((a, b) => b.rank_weight - a.rank_weight);
 
-  logger.info('Detected issues count:', detectedIssues.length);
-  logger.info('Detected issue IDs:', detectedIssues.map(i => i.issue_id));
+  logger.info(`Detected ${detected.length} issues:`, detected.map(i => i.issue_id));
 
-  return detectedIssues;
+  return detected;
 }
 
-/**
- * Build leverage points from detected issues
- */
+// ─────────────────────────────────────────────
+// Build enriched leverage points for report
+// ─────────────────────────────────────────────
 function buildEnrichedLeveragePoints(detectedIssues) {
   if (detectedIssues.length === 0) {
     return [{
       rank: 1,
       point_id: 'no_issues_detected',
-      title: 'No specific issues identified',
-      observation: 'Based on the information provided, no specific issues were identified. This may indicate the deposit was returned, the timeline has not passed, or additional information is needed.',
-      why_this_matters: null,
+      title: 'No Specific Issues Identified',
+      why_this_matters: 'Based on the information provided, no specific compliance issues were detected. This may indicate the deposit was returned, the 30-day deadline has not yet passed, or additional information is needed.',
       supporting_facts: [],
       statute_citations: [],
-      lease_citations: 'none_found',
       recommended_steps: [],
       severity: 'low',
     }];
@@ -600,324 +449,144 @@ function buildEnrichedLeveragePoints(detectedIssues) {
     rank: index + 1,
     point_id: issue.issue_id,
     title: issue.title,
-    observation: buildObservation(issue),
     why_this_matters: issue.why_this_matters,
     supporting_facts: issue.supporting_facts,
     statute_citations: issue.statute_citations.map(id => ({
       rule_id: id,
-      citation: TX_RULES.statutes[id]?.citation || `Tex. Prop. Code § ${id}`,
-      title: TX_RULES.statutes[id]?.title || '',
+      citation: TX_RULES.statutes?.[id]?.citation || `Tex. Prop. Code § ${id}`,
+      title: TX_RULES.statutes?.[id]?.title || '',
     })),
-    lease_citations: issue.lease_citations,
     recommended_steps: issue.recommended_steps,
     severity: issue.severity,
   }));
 }
 
-/**
- * Build observation text from issue
- */
-function buildObservation(issue) {
-  const facts = issue.supporting_facts || [];
-  const factSummary = facts.map(f => f.fact).join('. ');
-  return `Based on the information provided: ${factSummary}.`;
-}
-
-/**
- * Derive procedural steps from detected issues
- * Generates concrete, actionable checklist items
- */
+// ─────────────────────────────────────────────
+// Build procedural steps from detected issues
+// ─────────────────────────────────────────────
 function deriveProceduralSteps(detectedIssues) {
   const steps = [];
   const addedActions = new Set();
   const hasHighSeverity = detectedIssues.some(i => i.severity === SEVERITY.HIGH);
 
-  // Step 1: Always start with organizing documentation
+  // Step 1: Always gather documents
   steps.push({
-    action_id: 'organize_records',
+    step_number: 1,
     title: 'Gather Your Documents',
     description:
-      'Collect and organize everything related to your rental in one folder (physical or digital). ' +
-      'Include: (1) your signed lease, (2) move-in condition report or photos, (3) move-out photos, ' +
-      '(4) deposit payment receipt, (5) any emails/texts/letters with your landlord, ' +
-      '(6) proof of forwarding address delivery if you sent one.',
+      'Collect everything related to your rental in one place: ' +
+      '(1) your signed lease, (2) move-in condition report or photos, (3) move-out photos, ' +
+      '(4) deposit payment receipt, (5) any emails, texts, or letters with your landlord, ' +
+      '(6) proof of forwarding address delivery if sent.',
     category: 'documentation',
     checklist: [
       'Lease agreement',
       'Move-in photos or condition report',
       'Move-out photos',
       'Deposit payment receipt',
-      'Landlord communications (emails, texts, letters)',
-      'Forwarding address proof (certified mail receipt)',
+      'All landlord communications (emails, texts, letters)',
+      'Forwarding address proof (certified mail receipt if applicable)',
     ],
+    resources: [],
   });
   addedActions.add('organize_records');
 
-  // Collect unique recommended steps from all issues
+  // Add steps from detected issues
   for (const issue of detectedIssues) {
     for (const step of issue.recommended_steps || []) {
       if (!addedActions.has(step.action)) {
         addedActions.add(step.action);
         steps.push({
-          action_id: step.action,
+          step_number: steps.length + 1,
           title: formatActionTitle(step.action),
           description: step.description,
-          derived_from: issue.issue_id,
           category: categorizeAction(step.action),
+          checklist: [],
+          resources: [],
         });
       }
     }
   }
 
-  // Add timeline documentation for high-severity cases
-  if (hasHighSeverity && !addedActions.has('create_timeline')) {
-    steps.push({
-      action_id: 'create_timeline',
-      title: 'Write Down Your Timeline',
-      description:
-        'Create a simple dated list of key events: lease start date, lease end date, ' +
-        'move-out date, when you provided forwarding address, any communications about the deposit, ' +
-        'and any refund or itemization received. This one-page summary helps anyone reviewing ' +
-        'your situation understand it quickly.',
-      category: 'documentation',
-    });
-  }
-
-  // Only add attorney/court steps if HIGH severity issues exist
+  // Add resources step for high severity cases
   if (hasHighSeverity) {
     steps.push({
-      action_id: 'send_formal_letter',
-      title: 'Send a Written Request',
-      description:
-        'Send a formal written request to your landlord via certified mail with return receipt. ' +
-        'Include your name, the property address, move-out date, deposit amount, ' +
-        'your forwarding address, and a clear request for return of your deposit or a written ' +
-        'itemization of deductions. Keep a copy of the letter and the certified mail receipt. ' +
-        'This creates a paper trail.',
-      category: 'communication',
-      checklist: [
-        'Your full name',
-        'Property address you rented',
-        'Move-out date',
-        'Deposit amount',
-        'Your current mailing address',
-        'Clear request for deposit return or itemization',
-        'Keep copy of letter',
-        'Keep certified mail receipt',
-      ],
-    });
-
-    steps.push({
-      action_id: 'learn_options',
+      step_number: steps.length + 1,
       title: 'Learn About Your Options',
       description:
-        'If your landlord doesn\'t respond to a written request, you have options. ' +
-        'Texas Justice of the Peace courts handle small claims up to $20,000—filing fees ' +
-        'are typically under $100 and you don\'t need a lawyer. You can also consult with ' +
-        'a licensed Texas attorney for advice specific to your situation.',
+        'If your written demand is not resolved, Texas Justice of the Peace courts handle small claims ' +
+        'up to $20,000. Filing fees are typically $50-100. You may also consult with a licensed Texas attorney.',
       category: 'next_steps',
+      checklist: [],
       resources: [
         {
-          title: 'TexasLawHelp.org - Security Deposits',
+          title: 'TexasLawHelp.org — Security Deposits',
           url: 'https://texaslawhelp.org/article/security-deposits',
-          description: 'Free guide to Texas security deposit rights.',
+          description: 'Free guide to Texas security deposit rights',
         },
         {
-          title: 'Texas Justice Courts',
+          title: 'Texas JP Courts (Small Claims)',
           url: 'https://www.txcourts.gov/about-texas-courts/trial-courts/justice-of-the-peace-courts/',
-          description: 'Find your local JP court for small claims.',
-        },
-        {
-          title: 'State Bar of Texas Lawyer Referral',
-          url: 'https://www.texasbar.com/AM/Template.cfm?Section=Lawyer_Referral_Service_LRIS_',
-          description: 'Find a licensed Texas attorney.',
+          description: 'Find your local JP court',
         },
       ],
     });
   }
 
-  // Number the steps
-  return steps.map((step, index) => ({
-    step_number: index + 1,
-    title: step.title,
-    description: step.description,
-    category: step.category,
-    checklist: step.checklist || [],
-    resources: step.resources || [],
-    applicability_note: step.derived_from
-      ? `Relevant to: ${step.derived_from.replace(/_/g, ' ')}`
-      : null,
-  }));
+  // Re-number after all steps are added
+  return steps.map((s, i) => ({ ...s, step_number: i + 1 }));
 }
 
-/**
- * Categorize action into step category
- */
-function categorizeAction(action) {
-  const categories = {
-    // Documentation
-    document_timeline: 'documentation',
-    document_condition: 'documentation',
-    preserve_evidence: 'documentation',
-    preserve_communications: 'documentation',
-    organize_records: 'documentation',
-    gather_photos: 'documentation',
-    create_timeline: 'documentation',
-    gather_move_out_evidence: 'documentation',
-    compare_photos: 'documentation',
-    document_move_out_condition: 'documentation',
-
-    // Communication
-    send_written_demand: 'communication',
-    send_formal_letter: 'communication',
-    written_request: 'communication',
-    request_itemization: 'communication',
-    request_itemization_letter: 'communication',
-    provide_forwarding_address: 'communication',
-    send_forwarding_address_now: 'communication',
-    confirm_forwarding_address: 'communication',
-
-    // Review
-    review_lease_terms: 'review',
-    review_lease: 'review',
-    review_cleaning_requirements: 'review',
-    check_lease_cleaning_clause: 'review',
-    research_normal_wear: 'review',
-    note_statutory_deadline: 'review',
-
-    // Calendar
-    set_reminder: 'planning',
-    note_30_day_start: 'planning',
-
-    // Next steps
-    learn_options: 'next_steps',
-    consult_attorney: 'next_steps',
-    small_claims_info: 'next_steps',
-  };
-  return categories[action] || 'documentation';
-}
-
-/**
- * Format action ID as human-readable title
- */
-function formatActionTitle(actionId) {
-  const titles = {
-    // Documentation actions
-    document_timeline: 'Document Your Timeline',
-    document_condition: 'Document Property Condition',
-    preserve_evidence: 'Preserve Your Evidence',
-    preserve_communications: 'Save All Communications',
-    organize_records: 'Gather Your Documents',
-    gather_photos: 'Collect Your Photos',
-    create_timeline: 'Write Down Your Timeline',
-    gather_move_out_evidence: 'Collect Move-Out Evidence',
-    compare_photos: 'Compare Move-In and Move-Out Photos',
-    research_normal_wear: 'Learn About Normal Wear vs. Damage',
-
-    // Communication actions
-    send_written_demand: 'Send a Written Request',
-    send_formal_letter: 'Send a Formal Letter',
-    request_itemization: 'Request an Itemized List',
-    request_itemization_letter: 'Request Itemization in Writing',
-    provide_forwarding_address: 'Provide Your Forwarding Address',
-    send_forwarding_address_now: 'Send Your Forwarding Address Now',
-    confirm_forwarding_address: 'Confirm Your Forwarding Address',
-
-    // Review actions
-    review_lease_terms: 'Review Lease Terms',
-    review_lease: 'Review Your Lease',
-    review_cleaning_requirements: 'Check Lease Cleaning Requirements',
-    check_lease_cleaning_clause: 'Check Lease Cleaning Clause',
-    document_move_out_condition: 'Document Your Move-Out Condition',
-    note_statutory_deadline: 'Note the 30-Day Deadline',
-
-    // Calendar/reminder actions
-    set_reminder: 'Set a Calendar Reminder',
-    note_30_day_start: 'Mark When the 30-Day Clock Started',
-
-    // Next steps
-    learn_options: 'Learn About Your Options',
-    consult_attorney: 'Consult a Licensed Texas Attorney',
-    small_claims_info: 'Learn About Small Claims Court',
-  };
-  return titles[actionId] || actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-}
-
-/**
- * Calculate amount withheld from deposit
- */
-function calculateWithheld(depositAmount, amountReturned) {
-  if (!depositAmount || !amountReturned) {
-    return 'Unable to calculate';
-  }
-
-  const parseAmount = (str) => {
-    const match = String(str).match(/[\d,]+\.?\d*/);
-    return match ? parseFloat(match[0].replace(/,/g, '')) : null;
-  };
-
-  const deposit = parseAmount(depositAmount);
-  const returned = parseAmount(amountReturned);
-
-  if (deposit === null || returned === null) {
-    return 'Unable to calculate';
-  }
-
-  const withheld = deposit - returned;
-  return `$${withheld.toFixed(2)}`;
-}
-
-/**
- * Get applicable statutory references based on detected issues
- */
+// ─────────────────────────────────────────────
+// Get applicable statutes
+// ─────────────────────────────────────────────
 function getApplicableStatutes(detectedIssues) {
-  const statuteIds = new Set();
-
-  // Always include foundational statutes
-  statuteIds.add('92.101');
-  statuteIds.add('92.103');
-
-  // Add statutes from detected issues
+  const ids = new Set(['92.101', '92.103']);
   for (const issue of detectedIssues) {
-    for (const id of issue.statute_citations || []) {
-      statuteIds.add(id);
-    }
+    for (const id of issue.statute_citations || []) ids.add(id);
   }
 
-  // Build full statute references
-  return Array.from(statuteIds)
-    .filter(id => TX_RULES.statutes[id])
+  return Array.from(ids)
+    .filter(id => TX_RULES.statutes?.[id])
     .map(id => ({
       citation: TX_RULES.statutes[id].citation,
       title: TX_RULES.statutes[id].title,
       summary: TX_RULES.statutes[id].summary,
-      relevance_to_case: buildStatuteRelevance(id, detectedIssues),
       url: TX_RULES.statutes[id].full_text_url,
     }));
 }
 
-/**
- * Build relevance explanation for a statute
- */
-function buildStatuteRelevance(statuteId, detectedIssues) {
-  const relevanceMap = {
-    '92.101': 'Referenced as the foundational definition of security deposits in Texas.',
-    '92.103': 'Referenced because the tenant\'s situation involves security deposit timeline questions.',
-    '92.104': 'Referenced because the situation involves deductions or retention of the deposit.',
-    '92.107': 'Referenced because forwarding address status may affect timeline calculations.',
-    '92.109': 'Referenced because the 30-day timeline has passed, which may be relevant to landlord obligations.',
+// ─────────────────────────────────────────────
+// Action title / category helpers
+// ─────────────────────────────────────────────
+function formatActionTitle(actionId) {
+  const titles = {
+    send_written_demand: 'Send a Written Demand Letter',
+    document_timeline: 'Document Your Timeline',
+    request_itemization_letter: 'Request Itemization in Writing',
+    gather_move_out_evidence: 'Collect Move-Out Evidence',
+    send_forwarding_address_now: 'Send Your Forwarding Address',
+    note_30_day_start: 'Mark the 30-Day Start Date',
+    compare_photos: 'Compare Move-In and Move-Out Photos',
+    research_normal_wear: 'Learn About Normal Wear vs. Damage',
+    confirm_forwarding_address: 'Confirm Your Forwarding Address',
   };
+  return titles[actionId] || actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
 
-  // Check if any detected issue cites this statute
-  const citingIssues = detectedIssues.filter(i =>
-    (i.statute_citations || []).includes(statuteId)
-  );
-
-  if (citingIssues.length > 0) {
-    return relevanceMap[statuteId] || `Referenced in connection with: ${citingIssues.map(i => i.title).join(', ')}.`;
-  }
-
-  return relevanceMap[statuteId] || 'Referenced for general context.';
+function categorizeAction(action) {
+  const map = {
+    send_written_demand: 'communication',
+    document_timeline: 'documentation',
+    request_itemization_letter: 'communication',
+    gather_move_out_evidence: 'documentation',
+    send_forwarding_address_now: 'communication',
+    note_30_day_start: 'planning',
+    compare_photos: 'documentation',
+    research_normal_wear: 'review',
+    confirm_forwarding_address: 'communication',
+  };
+  return map[action] || 'documentation';
 }
 
 module.exports = {

@@ -82,7 +82,7 @@ async function saveCase(caseId, payload) {
       paymentStatus: 'pending',
       stripeSessionId: null,
       paidAt: null,
-      amount: 1999, // cents
+      amount: 4999, // cents
       leaseText: null,
       leasePageMarkers: null,
       analysisReport: null,
@@ -236,6 +236,38 @@ async function getPdfDocument(caseId) {
 }
 
 /**
+ * Find the most recent paid case for a given email address.
+ * Used by the resend-report endpoint.
+ * @param {string} email - Tenant email
+ * @returns {Object|null} Most recent paid case or null
+ */
+async function getCaseByEmail(email) {
+  try {
+    const cases = await fs.readdir(dataDir);
+    const normalizedEmail = email.toLowerCase().trim();
+    let best = null;
+
+    for (const caseId of cases) {
+      const caseData = await getCase(caseId);
+      if (!caseData) continue;
+
+      const caseEmail = caseData.intake?.tenant_information?.email;
+      if (!caseEmail || caseEmail.toLowerCase().trim() !== normalizedEmail) continue;
+      if (caseData.paymentStatus !== 'paid') continue;
+
+      if (!best || new Date(caseData.paidAt) > new Date(best.paidAt)) {
+        best = caseData;
+      }
+    }
+
+    return best;
+  } catch (error) {
+    logger.error('Failed to search cases by email', { error });
+    throw error;
+  }
+}
+
+/**
  * Find case by Stripe session ID
  * @param {string} sessionId - Stripe session ID
  * @returns {Object|null} Case data or null if not found
@@ -337,6 +369,7 @@ module.exports = {
   updateCaseLeaseData,
   updateCaseAnalysisReport,
   getCaseBySessionId,
+  getCaseByEmail,
   savePdfDocument,
   getPdfDocument,
   deleteCase,

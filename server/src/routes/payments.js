@@ -1,6 +1,7 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getCase, updateCasePaymentStatus, getCaseBySessionId } = require('../lib/caseStore');
+const { sendReportEmail } = require('../lib/emailService');
 const { PRODUCT_PRICE, PRODUCT_NAME, PRODUCT_DESCRIPTION, CURRENCY } = require('../config/pricing');
 const { canAccessCase } = require('../middleware/sessionAuth');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
@@ -137,6 +138,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       });
 
       logger.info('Payment completed', { caseId, sessionId: session.id });
+
+      // Send report access email (non-blocking — don't let email failure fail the webhook)
+      const tenantEmail = existingCase.intake?.tenant_information?.email;
+      if (tenantEmail) {
+        sendReportEmail(tenantEmail, caseId, CLIENT_ORIGIN).catch((err) => {
+          logger.error('Failed to send report email via webhook', { caseId, error: err.message });
+        });
+      }
       break;
     }
 
@@ -187,6 +196,14 @@ router.get('/verify/:sessionId', async (req, res) => {
         paymentStatus: 'paid',
         paidAt: new Date().toISOString(),
       });
+
+      // Send report email (reconciliation path — webhook may have been missed)
+      const tenantEmail = caseData.intake?.tenant_information?.email;
+      if (tenantEmail) {
+        sendReportEmail(tenantEmail, caseData.id, CLIENT_ORIGIN).catch((err) => {
+          logger.error('Failed to send report email via reconciliation', { caseId: caseData.id, error: err.message });
+        });
+      }
     }
 
     return res.status(200).json({

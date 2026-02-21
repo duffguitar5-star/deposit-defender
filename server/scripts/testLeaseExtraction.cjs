@@ -380,6 +380,7 @@ async function main() {
   }
   console.log('\n    Selected address:');
   if (addrResult.property_street) {
+    console.log(`        mode:       ${addrResult._formFieldMode ? 'form-field' : 'anchor-scoring'}`);
     console.log(`        full:       ${addrResult.property_address_full}`);
     console.log(`        street:     ${addrResult.property_street}`);
     console.log(`        city:       ${addrResult.property_city}`);
@@ -387,7 +388,10 @@ async function main() {
     console.log(`        zip:        ${addrResult.property_zip}`);
     console.log(`        confidence: ${addrResult.property_address_confidence}`);
   } else {
-    console.log('        (none — no candidate reached min score 5 with street suffix + leading digit)');
+    const ffNote = addrResult._formFieldMode === false
+      ? ' (form-field pattern not found; anchor-scoring also failed)'
+      : ' (no candidate reached min score 5 with street suffix + leading digit)';
+    console.log('       (none —' + ffNote + ')');
   }
 
   // Also run landlord notice address extraction

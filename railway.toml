@@ -1,0 +1,6 @@
+[build]
+buildCommand = "cd client && npm install && npm run build && cd ../server && npm install"
+
+[deploy]
+startCommand = "cd server && node src/server.js"
+healthcheckPath = "/api/health/live"

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,7 +8,7 @@
   --color-primary: #1F3A5F;
   --color-accent: #F25C54;
   --color-accent-secondary: #F4D35E;
-  --color-bg: #F7F9FC;
+  --color-bg: #f8fafc;
   --color-text: #1A1A1A;
   --shadow-soft: 0 24px 60px rgba(31, 58, 95, 0.2);
   --shadow-card: 0 16px 32px rgba(31, 58, 95, 0.12);

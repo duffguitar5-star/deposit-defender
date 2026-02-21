@@ -98,18 +98,22 @@ function buildCaseAnalysisReport(caseData) {
   const leverageScore = calculateLeverageScore(intake, timeline, detectedIssues);
   const leverageGrade = getLeverageGrade(leverageScore);
   const strategicPosition = getStrategicPosition(leverageScore);
-  const winProbability = estimateWinProbability(leverageScore, intake);
+  const winProbability = estimateWinProbability(leverageScore, intake, timeline);
   const evidenceMatrix = assessEvidenceQuality(intake);
   const badFaithIndicators = getBadFaithIndicators(intake, timeline);
 
+  // case_strength_score is the single authoritative scalar from which all
+  // other outputs (grade, position, action, recovery) are derived.
+  // leverage_score is kept as a backward-compatible alias.
   const case_strength = {
-    leverage_score: leverageScore,
-    leverage_grade: leverageGrade,
-    strategic_position: strategicPosition,
-    win_probability: winProbability,
-    evidence_quality: evidenceMatrix.overall_strength,
+    case_strength_score:  leverageScore,   // canonical name
+    leverage_score:       leverageScore,   // backward-compatible alias
+    leverage_grade:       leverageGrade,
+    strategic_position:   strategicPosition,
+    win_probability:      winProbability,
+    evidence_quality:     evidenceMatrix.overall_strength,
     bad_faith_indicators: badFaithIndicators,
-    evidence_matrix: evidenceMatrix,
+    evidence_matrix:      evidenceMatrix,
   };
 
   // ─────────────────────────────────────────────

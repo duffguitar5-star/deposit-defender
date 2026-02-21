@@ -8,11 +8,11 @@
 const express = require('express');
 const { getCase, updateCaseAnalysisReport, getPdfDocument, savePdfDocument } = require('../lib/caseStore');
 const { buildCaseAnalysisReport, validateReport } = require('../lib/CaseAnalysisService');
-const { generateReportPdf, generateReportJson } = require('../lib/reportPdfGenerator');
+const { generateReportPdf } = require('../lib/reportPdfGenerator');
+const { generateDemandLetterPdf } = require('../lib/demandLetterGenerator');
 const { requireCaseOwnership } = require('../middleware/sessionAuth');
 const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
 const logger = require('../lib/logger');
-const { sendPdfEmail } = require('../lib/emailService');
 
 const router = express.Router();
 
@@ -37,8 +37,8 @@ router.get('/:caseId', async (req, res) => {
   // Payment verification above provides sufficient authorization.
 
   try {
-    // Check if PDF already exists (cache)
-    let pdfBuffer = await getPdfDocument(req.params.caseId);
+    // Check if PDF already exists (cache). Pass ?nocache=1 to force regeneration.
+    let pdfBuffer = req.query.nocache ? null : await getPdfDocument(req.params.caseId);
 
     if (!pdfBuffer) {
       // Build Case Analysis Report
@@ -120,11 +120,38 @@ router.get('/:caseId/json', async (req, res) => {
     // Store the generated report
     await updateCaseAnalysisReport(req.params.caseId, report);
 
+    // Build intake context for letter modal (safe field extraction)
+    const intake = storedCase.intake || {};
+    const ti = intake.tenant_information || {};
+    const li = intake.landlord_information || {};
+    const pi = intake.property_information || {};
+    const mo = intake.move_out_information || {};
+    const sd = intake.security_deposit_information || {};
+
+    const context = {
+      tenantName: ti.full_name || '',
+      tenantEmail: ti.email || '',
+      tenantPhone: ti.phone || '',
+      landlordName: li.landlord_name || '',
+      landlordAddress: li.landlord_address || '',
+      landlordCity: li.landlord_city || '',
+      landlordState: li.landlord_state || 'TX',
+      landlordZip: li.landlord_zip || '',
+      landlordPhone: li.landlord_phone || '',
+      propertyAddress: pi.property_address || '',
+      propertyCity: pi.city || '',
+      propertyZip: pi.zip_code || '',
+      moveOutDate: mo.move_out_date || '',
+      depositAmount: sd.deposit_amount || '',
+      amountReturned: sd.amount_returned || '',
+    };
+
     return res.json({
       status: 'ok',
       data: {
         report,
         validation,
+        context,
       },
     });
   } catch (error) {
@@ -155,19 +182,25 @@ router.get('/:caseId/preview', async (req, res) => {
     // Build Case Analysis Report
     const report = buildCaseAnalysisReport(storedCase);
 
-    // Return limited preview (no full leverage points or procedural steps)
+    const cs = report.case_strength || {};
+    const topLp = report.leverage_points?.[0];
+
+    // Return limited preview (grade, probability, strongest argument only)
     return res.json({
       status: 'ok',
       data: {
         preview: {
-          case_id: report.report_metadata.case_id,
-          timeline_phase: report.timeline.current_status.timeline_phase,
-          days_since_move_out: report.timeline.current_status.days_since_move_out,
-          compliance_summary: report.compliance_checklist.summary,
-          leverage_point_count: report.leverage_points.length,
-          statutory_reference_count: report.statutory_references.length,
-          lease_clause_count: report.lease_clause_citations.length,
-          disclaimer: report.disclaimers.primary,
+          case_id: report.report_metadata?.case_id,
+          leverage_grade: cs.leverage_grade || '?',
+          leverage_score: cs.leverage_score ?? 0,
+          win_probability: cs.win_probability || 0,
+          strategic_position: cs.strategic_position || 'UNCERTAIN',
+          days_since_move_out: report.timeline?.days_since_move_out ?? null,
+          past_30_days: report.timeline?.past_30_days ?? null,
+          strongest_argument: topLp ? topLp.title : null,
+          leverage_point_count: report.leverage_points?.length ?? 0,
+          recommended_action: report.strategy?.recommended_action || null,
+          disclaimer: report.disclaimers?.primary || null,
         },
         payment_required: storedCase.paymentStatus !== 'paid',
       },
@@ -179,83 +212,37 @@ router.get('/:caseId/preview', async (req, res) => {
 });
 
 /**
- * POST /:caseId/email
+ * POST /:caseId/letter
  *
- * Email Case Analysis Report PDF to provided email address
- * Email address is used transiently and not stored
+ * Generate demand letter as PDF with user-supplied field overrides
  */
-router.post('/:caseId/email', async (req, res) => {
+router.post('/:caseId/letter', async (req, res) => {
   const storedCase = await getCase(req.params.caseId);
 
   if (!storedCase) {
     return res.status(404).json(createErrorResponse(ERROR_CODES.CASE_NOT_FOUND));
   }
 
-  // Payment gate
   if (storedCase.paymentStatus !== 'paid') {
     return res.status(402).json(createErrorResponse(ERROR_CODES.PAYMENT_REQUIRED));
   }
 
-  // Note: No session check required. Case ID + payment status provides authorization.
-
-  // Validate email address from request body
-  const { email } = req.body;
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_EMAIL, 'Email address is required'));
-  }
-
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_EMAIL));
-  }
-
   try {
-    // Check if PDF already exists (cache)
-    let pdfBuffer = await getPdfDocument(req.params.caseId);
+    // Build report for leverage context (bad faith indicators, violations)
+    const report = buildCaseAnalysisReport(storedCase);
 
-    if (!pdfBuffer) {
-      // Build Case Analysis Report
-      const report = buildCaseAnalysisReport(storedCase);
+    // Merge user-supplied fields with intake data as fallback
+    const fields = req.body.fields || {};
 
-      // Validate report structure
-      const validation = validateReport(report);
-      if (!validation.valid) {
-        logger.warn('Report validation failed', { caseId: req.params.caseId, errors: validation.errors });
-      }
+    const letterBuffer = await generateDemandLetterPdf(fields, report);
 
-      // Store the generated report
-      await updateCaseAnalysisReport(req.params.caseId, report);
-
-      // Generate PDF
-      pdfBuffer = await generateReportPdf(report);
-
-      // Cache PDF
-      await savePdfDocument(req.params.caseId, pdfBuffer);
-    }
-
-    // Send email (email address used transiently, not stored)
-    await sendPdfEmail(email, storedCase.id, pdfBuffer);
-
-    logger.info('PDF emailed successfully', {
-      caseId: req.params.caseId,
-      emailSentTo: email, // Logged but not persisted
-    });
-
-    return res.json({
-      status: 'ok',
-      data: {
-        message: 'PDF sent to your email address',
-      },
-    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="demand-letter-${storedCase.id}.pdf"`);
+    res.setHeader('Content-Length', letterBuffer.length);
+    return res.send(letterBuffer);
   } catch (error) {
-    logger.error('Email delivery error', { caseId: req.params.caseId, error });
-
-    // Check if it's a timeout error
-    const isTimeout = error.message && error.message.includes('timed out');
-    const errorCode = isTimeout ? ERROR_CODES.OCR_TIMEOUT : ERROR_CODES.PDF_GENERATION_FAILED;
-
-    return res.status(500).json(createErrorResponse(errorCode, 'Unable to send email. Please try again.'));
+    logger.error('Letter generation error', { caseId: req.params.caseId, error });
+    return res.status(500).json({ status: 'error', message: 'Letter generation failed. Please try again.' });
   }
 });
 

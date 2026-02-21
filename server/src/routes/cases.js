@@ -5,7 +5,10 @@ const { ERROR_CODES, createErrorResponse } = require('../lib/errorCodes');
 const { fileUploadLimiter, caseCreationLimiter } = require('../middleware/rateLimiter');
 const logger = require('../lib/logger');
 const { validateIntake } = require('../lib/intakeValidation');
-const { saveCase, getCase, updateCaseLeaseData } = require('../lib/caseStore');
+const { saveCase, getCase, updateCaseLeaseData, getCaseByEmail } = require('../lib/caseStore');
+const { sendReportEmail } = require('../lib/emailService');
+
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
 const {
   extractTextFromImage,
   extractTextFromPdf,
@@ -213,26 +216,52 @@ function extractStructuredData(text, sections) {
   if (!extracted.lease_end_date && allDates.length > 1) extracted.lease_end_date = allDates[1].parsed;
 
   // Tenant name
+  // NOTE: patterns use gi so anchors match "Tenant"/"TENANT"/"tenant".
+  // We then validate each word starts with uppercase in JS (rules out lowercase
+  // common phrases like "of all terms" that the i-flag would otherwise match).
   const tenantPatterns = [
-    /(?:tenant|lessee)[:\s]+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:,|\(|$)/gi,
-    /between[^,]{0,50}and[:\s]+([A-Z][a-z]+\s+[A-Z][a-z]+)\s*\(/gi,
+    /(?:tenant|lessee)[:\s]+([A-Za-z]+(?:\s+[A-Za-z]+){1,2})\s*(?:,|\(|$)/gi,
+    /between[^,]{0,50}and[:\s]+([A-Za-z]+\s+[A-Za-z]+)\s*\(/gi,
   ];
   for (const p of tenantPatterns) {
     p.lastIndex = 0;
     const m = p.exec(text);
     if (m && m[1]) {
       const name = m[1].trim();
-      const bad = ['agrees', 'shall', 'must', 'will', 'landlord', 'owner', 'manager', 'property'];
-      if (!bad.some((w) => name.toLowerCase().includes(w)) && name.length >= 5 && name.length <= 50 && name.split(/\s+/).length >= 2) {
+      const words = name.split(/\s+/);
+      // Each word must begin with an uppercase letter — filters out "of all terms" etc.
+      if (!words.every(w => /^[A-Z]/.test(w))) continue;
+      const bad = ['agrees', 'shall', 'must', 'will', 'landlord', 'owner', 'manager', 'property',
+                   'terms', 'conditions', 'herein', 'above', 'below', 'said', 'tenant', 'lessee',
+                   'lessor', 'this', 'that', 'any', 'each', 'lease', 'agreement', 'notice'];
+      if (!bad.some((w) => name.toLowerCase().includes(w)) && name.length >= 4 && name.length <= 50 && words.length >= 2) {
         extracted.tenant_name = name; break;
       }
     }
   }
 
+  // Pet deposit
+  const petDepositPatterns = [
+    /pet\s*(?:deposit|fee)[:\s]+(?:amount[:\s]+)?(\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
+    /(?:non[- ]?refundable\s+)?pet\s*(?:deposit|fee)\s+of\s+(\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
+    /animal\s*(?:deposit|fee)[:\s]+(\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
+  ];
+  for (const p of petDepositPatterns) {
+    p.lastIndex = 0;
+    const m = p.exec(normalized);
+    if (m && m[1]) { extracted.pet_deposit_amount = m[1].replace(/\s+/g, '').trim(); break; }
+  }
+
   // Landlord name
   const landlordPatterns = [
-    /(?:landlord|lessor|owner|property\s*manager)[:\s]+([A-Z][A-Za-z\s.,'&-]+?)(?:\s*,|\s*\(|\s*whose|\s*located|\s*at|\s*address|$)/gi,
+    // "Landlord: ABC Properties, LLC" — stops at address/location cues
+    /(?:landlord|lessor|owner|property\s*manager)[:\s]+([A-Z][A-Za-z\s.,'&-]+?)(?:\s*,|\s*\(|\s*whose|\s*located|\s*at\b|\s*address|[\r\n]|$)/gi,
+    // "between [Landlord Name], hereinafter called 'Landlord'"
     /between\s+([A-Z][A-Za-z\s.,'&-]+?)\s*(?:,|\()?\s*(?:hereinafter|as|the)?\s*["']?(?:landlord|lessor|owner)/gi,
+    // All-caps entity: "LANDLORD: XYZ PROPERTIES LLC" — normalized by caller
+    /(?:LANDLORD|LESSOR|OWNER)\s*:\s*([A-Z][A-Z0-9\s.,'&-]+?)(?:\n|,\s*\d|\s{2,}|$)/g,
+    // Entity suffix cue: captures company names ending in LLC, LP, Inc, Corp, etc.
+    /(?:landlord|lessor|owner)\s+is\s+([A-Za-z][A-Za-z\s.,'&-]+?(?:LLC|L\.L\.C\.|LP|L\.P\.|Inc\.?|Corp\.?|Ltd\.?|Properties|Management|Realty|Investments?))\b/gi,
   ];
   for (const p of landlordPatterns) {
     p.lastIndex = 0;
@@ -344,6 +373,63 @@ function extractSections(text) {
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 
+/**
+ * Determine whether an extracted address confidence value clears the merge
+ * threshold.  Handles both numeric (form-field mode: 0.95) and string
+ * (anchor-based: 'high' | 'medium' | 'low' | 'none') values.
+ */
+function isAddressConfident(confidence) {
+  if (typeof confidence === 'number') return confidence >= 0.6;
+  return confidence === 'high' || confidence === 'medium';
+}
+
+/**
+ * Merge high-confidence lease-extracted address data into the (already
+ * validated) intake payload.  Mutates property_information in place —
+ * payload is a plain spread copy of req.body so this is safe.
+ *
+ * Returns a string describing which source won for each field ('lease' or 'form').
+ */
+function mergeLeaseAddress(payload, extractedData) {
+  const pi = payload.property_information;
+  const conf = extractedData.property_address_confidence;
+  const confident = isAddressConfident(conf);
+
+  const formSnapshot = {
+    property_address: pi.property_address,
+    city:             pi.city,
+    zip_code:         pi.zip_code,
+    county:           pi.county,
+  };
+
+  const leaseSnapshot = {
+    property_address: extractedData.property_address  || null,
+    city:             extractedData.city              || null,
+    zip_code:         extractedData.zip_code          || null,
+    county:           extractedData.county            || null,
+  };
+
+  console.log('[merge] Extracted address:', leaseSnapshot);
+  console.log('[merge] Form address     :', formSnapshot);
+  console.log('[merge] Confidence       :', conf, '→ source wins:', confident ? 'lease' : 'form');
+
+  if (confident) {
+    if (leaseSnapshot.property_address) pi.property_address = leaseSnapshot.property_address;
+    if (leaseSnapshot.city)             pi.city             = leaseSnapshot.city;
+    if (leaseSnapshot.zip_code)         pi.zip_code         = leaseSnapshot.zip_code;
+    if (leaseSnapshot.county)           pi.county           = leaseSnapshot.county;
+  }
+
+  console.log('[merge] Final property_information:', {
+    property_address: pi.property_address,
+    city:             pi.city,
+    zip_code:         pi.zip_code,
+    county:           pi.county,
+  });
+
+  return confident ? 'lease' : 'form';
+}
+
 router.post('/', caseCreationLimiter, async (req, res) => {
   // Separate lease_text (optional, not part of intake schema) from intake payload
   const { lease_text: leaseText, ...payload } = req.body;
@@ -351,6 +437,26 @@ router.post('/', caseCreationLimiter, async (req, res) => {
 
   if (!valid) {
     return res.status(400).json(createErrorResponse(ERROR_CODES.INVALID_INPUT, null, errors));
+  }
+
+  // ── Lease-data precedence merge ───────────────────────────────────────────
+  // If the client submitted lease text, re-run extraction here on the server
+  // and let high-confidence lease values override what the user typed into the
+  // property_information fields (which may be stale defaults or placeholder
+  // values from before they uploaded the lease).
+  if (leaseText && typeof leaseText === 'string' && leaseText.trim().length > 0) {
+    try {
+      const sections = extractSections(leaseText);
+      const extractedData = extractStructuredData(leaseText, sections);
+      if (extractedData && extractedData.property_address) {
+        mergeLeaseAddress(payload, extractedData);
+      } else {
+        console.log('[merge] No extracted address — form values kept as-is');
+      }
+    } catch (mergeErr) {
+      // Non-fatal: log and continue with whatever the form submitted
+      logger.warn('Lease-data merge failed', { error: mergeErr.message });
+    }
   }
 
   const caseId = uuidv4();
@@ -463,6 +569,37 @@ router.post('/lease-extract', fileUploadLimiter, upload.single('lease'), async (
         ? 'Image uploaded. Please fill in your lease details below — image text extraction is not available yet.'
         : 'Lease processed. Please fill in any fields not auto-detected below.',
   });
+});
+
+/**
+ * POST /api/cases/resend-report
+ * Looks up the most recent paid case for the given email and re-sends the link.
+ * Rate-limited by the existing caseCreationLimiter (reused for simplicity).
+ */
+router.post('/resend-report', caseCreationLimiter, async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return res.status(400).json({ status: 'error', message: 'A valid email address is required.' });
+  }
+
+  try {
+    const caseData = await getCaseByEmail(email.trim());
+
+    // Always return 200 — don't leak whether an email exists in the system
+    if (!caseData) {
+      logger.info('Resend-report: no paid case found for email', { email });
+      return res.status(200).json({ status: 'ok', message: 'If we have a report on file for that email, we\'ve sent the link.' });
+    }
+
+    await sendReportEmail(email.trim(), caseData.id, CLIENT_ORIGIN);
+    logger.info('Resend-report email sent', { caseId: caseData.id });
+
+    return res.status(200).json({ status: 'ok', message: 'If we have a report on file for that email, we\'ve sent the link.' });
+  } catch (err) {
+    logger.error('Resend-report failed', { error: err.message });
+    return res.status(500).json({ status: 'error', message: 'Unable to process your request. Please try again.' });
+  }
 });
 
 module.exports = router;

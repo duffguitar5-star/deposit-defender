@@ -18,6 +18,7 @@ const corsOptions = {
   origin: clientOrigin,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
+  exposedHeaders: ['Content-Length', 'Content-Disposition'],
   credentials: true, // Allow credentials (cookies/sessions)
 };
 
@@ -134,6 +135,14 @@ app.get('/api/health/ready', async (req, res) => {
 app.use('/api/cases', casesRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/documents', documentsRouter);
+
+// Serve React build in production (when client/build exists)
+const path = require('path');
+const clientBuild = path.join(__dirname, '..', '..', 'client', 'build');
+app.use(express.static(clientBuild));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuild, 'index.html'));
+});
 
 // Start cleanup interval for old cases (72-hour retention)
 startCleanupInterval();

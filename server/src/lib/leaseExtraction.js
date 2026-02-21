@@ -139,6 +139,109 @@ function captureAfterAnchor(text, anchorEnd) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Form-field address extraction (pre-check, no scoring required)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Detect labeled form-field lines and extract a property address without
+ * requiring a street suffix or minimum score.
+ *
+ * Matches:
+ *   Address: 1753 Bonaventure
+ *   City, State, ZIP: Mckinney, TX 75070
+ *
+ * Both lines must appear within 10 lines of each other.
+ * Returns null when the pattern is not found.
+ *
+ * @param {string} text  Raw lease text (newlines preserved)
+ * @returns {object|null}
+ */
+function extractAddressFromFormFields(text) {
+  // Normalize a string: replace PDF form-field filler artifacts.
+  //   non-breaking spaces → space, underscore runs → space,
+  //   collapse whitespace, trim.
+  const norm = (s) =>
+    s.replace(/\u00A0/g, ' ').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  let streetValue = null;
+  let cszValue = null;
+
+  // ── Pass 1: line-by-line (handles text where each field is on its own line) ─
+  const lines = text.split('\n');
+  let streetLineIdx = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = norm(lines[i]);
+
+    if (streetValue === null) {
+      const addrMatch = line.match(/^Address:\s*(.+)$/i);
+      if (addrMatch) {
+        streetValue = addrMatch[1].trim();
+        streetLineIdx = i;
+        continue;
+      }
+    }
+
+    const cszMatch = line.match(/^City,\s*State,?\s*ZIP:\s*(.+)$/i);
+    if (cszMatch && streetLineIdx !== -1 && (i - streetLineIdx) <= 10) {
+      cszValue = cszMatch[1].trim();
+      break;
+    }
+  }
+
+  // ── Pass 2: inline regex (handles pdfjs single-line page concatenation)  ─
+  // pdfjs joins all text items on a page with spaces and emits one "line" per
+  // page.  Form fields therefore appear as:
+  //   "Address: 1753 Bonaventure  City, State, ZIP: Mckinney, TX 75070  Phone: …"
+  if (!streetValue || !cszValue) {
+    const flat = norm(text.replace(/\n/g, ' '));
+    const inlineMatch = flat.match(
+      /\bAddress:\s+(.+?)\s+City,\s*State,?\s*ZIP:\s+(.+?)(?=\s+[A-Za-z]\w{0,20}:|\s*$)/i
+    );
+    if (inlineMatch) {
+      streetValue = inlineMatch[1].trim();
+      cszValue    = inlineMatch[2].trim();
+    }
+  }
+
+  if (!streetValue || !cszValue) return null;
+
+  // Parse "City, ST 12345" from the CSZ value
+  let city = null, state = null, zip = null;
+  const cszParsed = cszValue.match(/^([^,]+),?\s*([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)?$/);
+  if (cszParsed) {
+    city  = cszParsed[1].trim() || null;
+    state = cszParsed[2].toUpperCase();
+    zip   = cszParsed[3] ? cszParsed[3].trim() : null;
+  } else {
+    // Fallback: let parseAddressComponents handle unusual formatting
+    const combined = `${streetValue}, ${cszValue}`;
+    const parsed = parseAddressComponents(combined);
+    city  = parsed.city;
+    state = parsed.state;
+    zip   = parsed.zip;
+  }
+
+  let full = streetValue;
+  if (city)  full += ', ' + city;
+  if (state) full += ', ' + state;
+  if (zip)   full += ' ' + zip;
+
+  logger.debug('Form-field address detected', { street: streetValue, city, state, zip });
+
+  return {
+    property_address_full:       full.trim() || null,
+    property_street:             streetValue,
+    property_city:               city,
+    property_state:              state,
+    property_zip:                zip,
+    property_address_confidence: 0.95,
+    _formFieldMode:              true,
+    _candidates:                 [],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Property address extraction
 // ─────────────────────────────────────────────────────────────
 
@@ -146,6 +249,9 @@ function captureAfterAnchor(text, anchorEnd) {
  * Extract property (rental) address from lease text using multi-candidate
  * scoring. Works with text produced by pdfjs-dist (spaces within pages,
  * \n between pages) and plain-text leases.
+ *
+ * Tries form-field mode first (labeled "Address:" / "City, State, ZIP:"
+ * lines); falls back to anchor-based scoring if form-field mode finds nothing.
  *
  * @param {string} leaseText  Full text of the lease
  * @returns {{
@@ -155,6 +261,7 @@ function captureAfterAnchor(text, anchorEnd) {
  *   property_state: string|null,
  *   property_zip: string|null,
  *   property_address_confidence: 'high'|'medium'|'low'|'none',
+ *   _formFieldMode: boolean,
  *   _candidates: Array<{text, anchor, anchorPos, score, reason}>
  * }}
  */
@@ -169,6 +276,19 @@ function extractAddressFromText(leaseText) {
     _candidates: [],
   };
   if (!leaseText || leaseText.trim().length < 20) return EMPTY;
+
+  // ── Form-field mode (pre-check — no scoring, no suffix required) ──────────
+  const ffResult = extractAddressFromFormFields(leaseText);
+  if (ffResult) {
+    logger.debug('Form-field address detected', {
+      full:   ffResult.property_address_full,
+      street: ffResult.property_street,
+      city:   ffResult.property_city,
+      state:  ffResult.property_state,
+      zip:    ffResult.property_zip,
+    });
+    return ffResult;
+  }
 
   // Collapse horizontal whitespace but preserve newlines (page boundaries)
   const text = leaseText.replace(/[ \t]+/g, ' ');
@@ -251,7 +371,7 @@ function extractAddressFromText(leaseText) {
     logger.debug('Lease address: no qualifying candidate (min score 5)', {
       bestScore: candidates[0]?.score ?? 'n/a',
     });
-    return { ...EMPTY, _candidates: candidates.slice(0, 3) };
+    return { ...EMPTY, _formFieldMode: false, _candidates: candidates.slice(0, 3) };
   }
 
   const { street, city, state, zip } = parseAddressComponents(best.text);
@@ -280,6 +400,7 @@ function extractAddressFromText(leaseText) {
     property_state: state,
     property_zip: zip,
     property_address_confidence: confidence,
+    _formFieldMode: false,
     _candidates: candidates.slice(0, 3),
   };
 }
@@ -320,6 +441,11 @@ function extractLandlordNoticeAddress(leaseText) {
     /(?:owner[''s]{0,2}\s*(?:\/\s*agent)?\s*(?:for\s+service|address))\s*[:\-]\s*/gi,
     /(?:send\s+(?:notices?|correspondence)\s+to)\s*[:\-]?\s*/gi,
     /(?:landlord|lessor|owner)\s+(?:is\s+)?(?:located\s+at|address)\s*[:\-]\s*/gi,
+    // Common Texas HAR / TREC lease formats
+    /(?:lessor[''s]{0,2}\s+address|mailing\s+address\s+for\s+(?:landlord|lessor|owner))\s*[:\-]\s*/gi,
+    /(?:contact\s+(?:address|information)\s+for\s+(?:landlord|lessor|owner))\s*[:\-]\s*/gi,
+    /(?:LANDLORD|LESSOR|OWNER)\s*:\s*/g,
+    /(?:landlord|lessor)\s+information\s*[:\-]\s*/gi,
   ];
 
   const candidates = [];
@@ -359,9 +485,10 @@ function extractLandlordNoticeAddress(leaseText) {
 
   candidates.sort((a, b) => b.score - a.score || a.anchorPos - b.anchorPos);
 
-  const MIN_SCORE = 5;
+  const MIN_SCORE = 3;
+  const PO_BOX_RE = /\bP\.?\s*O\.?\s*Box\s+\d+/i;
   const best = candidates.find(
-    (c) => c.score >= MIN_SCORE && ADDR_SUFFIX_RE.test(c.text)
+    (c) => c.score >= MIN_SCORE && (ADDR_SUFFIX_RE.test(c.text) || PO_BOX_RE.test(c.text))
   );
 
   if (!best) return { ...EMPTY, _candidates: candidates.slice(0, 3) };

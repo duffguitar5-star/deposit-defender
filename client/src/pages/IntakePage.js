@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { DISCLAIMERS } from '../disclaimers';
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 const TABS = [
   { id: 'tenant', label: 'Your Info' },
@@ -61,7 +61,6 @@ function IntakePage() {
       landlord_information: {
         ...prev.landlord_information,
         landlord_name: ext.landlord_name || prev.landlord_information.landlord_name,
-        // landlord_address may now be { street, city, state, zip } or a legacy string
         landlord_address: (
           ext.landlord_address && typeof ext.landlord_address === 'object'
             ? ext.landlord_address.street
@@ -72,6 +71,11 @@ function IntakePage() {
             ? ext.landlord_address.city
             : ext.landlord_city
         ) || prev.landlord_information.landlord_city,
+        landlord_state: (
+          ext.landlord_address && typeof ext.landlord_address === 'object'
+            ? ext.landlord_address.state
+            : null
+        ) || prev.landlord_information.landlord_state,
         landlord_zip: (
           ext.landlord_address && typeof ext.landlord_address === 'object'
             ? ext.landlord_address.zip
@@ -93,6 +97,7 @@ function IntakePage() {
       security_deposit_information: {
         ...prev.security_deposit_information,
         deposit_amount: ext.deposit_amount || prev.security_deposit_information.deposit_amount,
+        pet_deposit_amount: ext.pet_deposit_amount || prev.security_deposit_information.pet_deposit_amount,
       },
     }));
   };
@@ -196,9 +201,9 @@ function IntakePage() {
 
           {/* ── Lease Upload Step ──────────────────────────────────────── */}
           {showUploadStep && (
-            <div className="card">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-lg font-semibold text-slate-900">Upload Your Lease (optional)</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Upload Your Lease</h3>
                 <button onClick={skipUpload} className="text-sm text-slate-400 hover:text-slate-600 underline">
                   Skip — fill in manually
                 </button>
@@ -259,26 +264,42 @@ function IntakePage() {
           {/* ── Tab Nav ────────────────────────────────────────────────── */}
           {uploadState === 'done' && (
             <>
-              <div className="flex border-b border-slate-200">
+              <div className="flex items-center gap-2 sm:gap-3">
                 {TABS.map((tab, idx) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => { if (idx < activeTab) { setActiveTab(idx); setError(''); } }}
-                    className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      idx === activeTab ? 'border-blue-600 text-blue-700'
-                      : idx < activeTab ? 'border-transparent text-slate-500 cursor-pointer hover:text-slate-700'
-                      : 'border-transparent text-slate-300 cursor-default'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{idx + 1}</span>
-                  </button>
+                  <React.Fragment key={tab.id}>
+                    <button
+                      onClick={() => { if (idx < activeTab) { setActiveTab(idx); setError(''); } }}
+                      disabled={idx >= activeTab}
+                      className="flex items-center gap-2 disabled:cursor-default"
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${
+                        idx < activeTab
+                          ? 'bg-blue-600 text-white'
+                          : idx === activeTab
+                          ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                          : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {idx < activeTab ? (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (idx + 1)}
+                      </div>
+                      <span className={`text-xs font-medium hidden sm:block transition-colors ${
+                        idx === activeTab ? 'text-slate-900' : idx < activeTab ? 'text-slate-500' : 'text-slate-300'
+                      }`}>{tab.label}</span>
+                    </button>
+                    {idx < TABS.length - 1 && (
+                      <div className={`flex-1 h-0.5 rounded-full transition-all duration-300 ${idx < activeTab ? 'bg-blue-600' : 'bg-slate-100'}`} />
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
 
               {/* ── Tab 0: Your Info ──────────────────────────────────── */}
               {activeTab === 0 && (
-                <div className="card space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                   <h3 className="text-lg font-semibold text-slate-900">Your Information</h3>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <label className="block">
@@ -300,7 +321,7 @@ function IntakePage() {
               {/* ── Tab 1: Property & Lease ───────────────────────────── */}
               {activeTab === 1 && (
                 <>
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Rental Property</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block sm:col-span-2">
@@ -322,8 +343,21 @@ function IntakePage() {
                     </div>
                   </div>
 
-                  <div className="card space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-900">Landlord / Property Manager</h3>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-slate-900">Landlord / Property Manager</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          update('landlord_information', 'landlord_address', form.property_information.property_address);
+                          update('landlord_information', 'landlord_city', form.property_information.city);
+                          update('landlord_information', 'landlord_zip', form.property_information.zip_code);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1 transition-colors"
+                      >
+                        Same as property address
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block sm:col-span-2">
                         <span className="text-sm font-medium text-gray-700">Landlord Name *</span>
@@ -348,7 +382,7 @@ function IntakePage() {
                     </div>
                   </div>
 
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Lease Dates</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <label className="block">
@@ -379,7 +413,7 @@ function IntakePage() {
               {/* ── Tab 2: Deposit & Move-out ─────────────────────────── */}
               {activeTab === 2 && (
                 <>
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Security Deposit</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block">
@@ -407,7 +441,7 @@ function IntakePage() {
                     </div>
                   </div>
 
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">After Move-out</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block">
@@ -457,7 +491,7 @@ function IntakePage() {
               {/* ── Tab 3: Notes & Submit ─────────────────────────────── */}
               {activeTab === 3 && (
                 <>
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Additional Notes</h3>
                     <p className="text-sm text-slate-500">Describe any damage the landlord is claiming, unusual circumstances, or other relevant details.</p>
                     <textarea
@@ -468,7 +502,7 @@ function IntakePage() {
                       className="w-full rounded-md border border-gray-300 p-3 text-sm"
                     />
                   </div>
-                  <div className="card space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Acknowledgements</h3>
                     <div className="space-y-3">
                       <label className="flex items-start gap-3 cursor-pointer">
@@ -481,7 +515,7 @@ function IntakePage() {
                       </label>
                     </div>
                   </div>
-                  <div className="notice-card text-xs text-slate-600">
+                  <div className="border-l-4 border-slate-200 bg-slate-50 p-4 rounded-xl text-xs text-slate-600">
                     <ul className="space-y-1">{DISCLAIMERS.map((line) => <li key={line}>{line}</li>)}</ul>
                   </div>
                 </>
@@ -490,12 +524,18 @@ function IntakePage() {
               {error && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
               <div className="flex gap-3">
-                {activeTab > 0 && <button onClick={handleBack} className="btn-outline flex-1">Back</button>}
+                {activeTab > 0 && (
+                  <button onClick={handleBack} className="flex-1 border border-slate-200 hover:border-slate-300 bg-white text-slate-700 rounded-xl px-6 py-3.5 font-medium transition-colors inline-flex items-center justify-center">
+                    Back
+                  </button>
+                )}
                 {activeTab < TABS.length - 1 ? (
-                  <button onClick={handleNext} className="cta-primary flex-1">Continue</button>
+                  <button onClick={handleNext} className="flex-1 bg-blue-700 hover:bg-blue-800 text-white rounded-xl px-6 py-3.5 font-bold transition-colors inline-flex items-center justify-center">
+                    Continue
+                  </button>
                 ) : (
-                  <button onClick={handleSubmit} disabled={isSubmitting} className="cta-primary flex-1 disabled:opacity-50">
-                    {isSubmitting ? 'Submitting...' : 'Submit & Continue to Review'}
+                  <button onClick={handleSubmit} disabled={isSubmitting} className="flex-1 bg-blue-700 hover:bg-blue-800 text-white rounded-xl px-6 py-3.5 font-bold transition-colors inline-flex items-center justify-center disabled:opacity-50">
+                    {isSubmitting ? 'Submitting...' : 'Analyze My Case →'}
                   </button>
                 )}
               </div>
