@@ -25,6 +25,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
+// Trust Railway's X-Forwarded-Proto header so req.secure is true for HTTPS
+// requests — required for secure session cookies to be sent behind a proxy
+app.set('trust proxy', 1);
+
 // Stripe webhook needs raw body, so we apply express.json() selectively
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '2mb' }));
