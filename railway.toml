@@ -1,6 +1,6 @@
 [build]
-buildCommand = "cd client && npm install && npm run build && cd ../server && npm install"
+builder = "NIXPACKS"
 
 [deploy]
-startCommand = "cd server && node src/server.js"
+startCommand = "node server/src/server.js"
 healthcheckPath = "/api/health/live"
