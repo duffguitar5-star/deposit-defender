@@ -997,21 +997,32 @@ function ReportPage() {
                             <p className="text-xs text-slate-600">{report.damage_defense}</p>
                           ) : (
                             <div className="space-y-2">
-                              {report.damage_defense.summary && (
-                                <p className="text-xs text-slate-700">{report.damage_defense.summary}</p>
+                              {(report.damage_defense.summary || report.damage_defense.strategic_note) && (
+                                <p className="text-xs text-slate-700">{report.damage_defense.summary || report.damage_defense.strategic_note}</p>
                               )}
                               {report.damage_defense.defenses?.length > 0 && (
-                                <ul className="space-y-1">
+                                <div className="space-y-2">
                                   {report.damage_defense.defenses.map((d, i) => (
-                                    <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                                      <span className="text-slate-400 mt-0.5 flex-shrink-0">•</span>
-                                      <span>{d.defense || d}</span>
-                                    </li>
+                                    <div key={i} className="text-xs text-slate-600">
+                                      {typeof d === 'string' ? (
+                                        <div className="flex items-start gap-1.5">
+                                          <span className="text-slate-400 mt-0.5 flex-shrink-0">•</span>
+                                          <span>{d}</span>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          {d.title && <p className="font-medium text-slate-700">{d.title}</p>}
+                                          {(d.defense || d.key_point) && (
+                                            <p className="mt-0.5">{d.defense || d.key_point}</p>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
                               )}
                               {/* Handle flat object defense data */}
-                              {!report.damage_defense.summary && !report.damage_defense.defenses && (
+                              {!report.damage_defense.summary && !report.damage_defense.strategic_note && !report.damage_defense.defenses && (
                                 <div className="space-y-1.5">
                                   {Object.entries(report.damage_defense)
                                     .filter(([, v]) => typeof v !== 'object')
