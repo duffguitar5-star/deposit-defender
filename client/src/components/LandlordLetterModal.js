@@ -423,9 +423,9 @@ function LandlordLetterModal({ caseId, context, report, onClose }) {
 
           {/* RIGHT: Letter Preview */}
           <div
-            className={`flex-1 overflow-y-auto bg-slate-200 p-4 ${
+            className={`flex-1 overflow-y-auto bg-slate-200 p-4 lg:!block ${
               activeTab === 'preview' ? 'block' : 'hidden'
-            } lg:block`}
+            }`}
           >
             <LetterPreview fields={fields} report={report} />
           </div>
