@@ -22,7 +22,8 @@ RUN cd client && npm run build
 COPY server/package*.json ./server/
 RUN cd server && npm install --production
 
-# Copy server source
+# Copy server source and shared ai/ schemas
 COPY server/ ./server/
+COPY ai/ ./ai/
 
 CMD ["node", "server/src/server.js"]
