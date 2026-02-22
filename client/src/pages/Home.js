@@ -9,8 +9,38 @@ function Home() {
 
       <main className="container pb-24">
 
+        {/* Product explanation — what DepositBack does */}
+        <section className="mt-12 mb-12 max-w-3xl mx-auto text-center px-4">
+          <h2
+            className="text-2xl font-bold text-slate-900 mb-3"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Did your landlord keep your deposit?
+          </h2>
+          <p className="text-slate-600 text-base leading-relaxed mb-8">
+            Texas law requires landlords to return your deposit — or send a written itemized list of deductions — within 30 days of move-out. If yours didn't, you may be entitled to get it back, plus penalties.
+            <br className="hidden md:block" />
+            DepositBack analyzes your case, scores your legal position, and generates a demand letter you can send today.
+          </p>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            {[
+              { step: '1', label: 'Upload your lease', sub: 'We auto-fill your details' },
+              { step: '2', label: 'We analyze your case', sub: 'Scored against Texas law' },
+              { step: '3', label: 'Get your action plan', sub: 'Demand letter + next steps' },
+            ].map(({ step, label, sub }) => (
+              <div key={step} className="flex flex-col items-center gap-1">
+                <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm mb-1">
+                  {step}
+                </div>
+                <p className="text-sm font-semibold text-slate-900 leading-tight">{label}</p>
+                <p className="text-xs text-slate-500">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Validation Strip — 3 punchy factual hits */}
-        <section className="mt-16 mb-20">
+        <section className="mt-4 mb-20">
           <div className="grid gap-0 md:grid-cols-3 border border-slate-200 rounded-2xl overflow-hidden">
             <div className="px-8 py-8 border-b md:border-b-0 md:border-r border-slate-200">
               <p

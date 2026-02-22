@@ -12,7 +12,7 @@ const schema = require(path.join(
 const ALLOWED_LEASE_TYPES = ['written', 'oral', 'unknown'];
 const ALLOWED_YES_NO_UNKNOWN = ['yes', 'no', 'unknown'];
 const ALLOWED_DEPOSIT_RETURNED = ['yes', 'no', 'partial'];
-const ALLOWED_COMM_METHODS = ['email', 'mail', 'text', 'other'];
+const ALLOWED_COMM_METHODS = ['email', 'mail', 'text', 'phone', 'certified mail', 'in person', 'other'];
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -171,11 +171,16 @@ function validateIntake(payload) {
   if (!isPlainObject(leaseInformation)) {
     addError(errors, 'lease_information', 'Required');
   } else {
-    const leaseStart = validateDate(errors, 'lease_information.lease_start_date', leaseInformation.lease_start_date, 'Lease start date');
-    const leaseEnd = validateDate(errors, 'lease_information.lease_end_date', leaseInformation.lease_end_date, 'Lease end date');
+    // Lease dates are optional in the form — only validate format/range if provided
+    const leaseStart = leaseInformation.lease_start_date
+      ? validateDate(errors, 'lease_information.lease_start_date', leaseInformation.lease_start_date, 'Lease start date')
+      : null;
+    const leaseEnd = leaseInformation.lease_end_date
+      ? validateDate(errors, 'lease_information.lease_end_date', leaseInformation.lease_end_date, 'Lease end date')
+      : null;
     validateEnum(errors, 'lease_information.lease_type', leaseInformation.lease_type, ALLOWED_LEASE_TYPES);
 
-    // Cross-field validation: lease end must be after lease start
+    // Cross-field validation: lease end must be after lease start (only when both are provided)
     if (leaseStart && leaseEnd && leaseEnd <= leaseStart) {
       addError(errors, 'lease_information.lease_end_date', 'Lease end date must be after lease start date');
     }
