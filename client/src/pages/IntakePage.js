@@ -230,7 +230,7 @@ function IntakePage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
+                    accept="application/pdf,image/png,image/jpeg,image/jpg,.pdf,.png,.jpg,.jpeg"
                     className="hidden"
                     onChange={handleFileChange}
                   />
