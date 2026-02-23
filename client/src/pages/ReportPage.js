@@ -8,20 +8,19 @@ const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 // ─── Display constants ────────────────────────────────────────────────────────
 
-const GRADE_COLORS = {
-  A: '#16a34a',
-  B: '#2563eb',
-  C: '#d97706',
-  D: '#ea580c',
-  F: '#dc2626',
+const LEVERAGE_TIERS = {
+  STRONG:  { label: 'Strong Leverage',  color: '#16a34a', bg: 'bg-green-100',  text: 'text-green-800',  border: 'border-green-300'  },
+  GOOD:    { label: 'Good Leverage',    color: '#2563eb', bg: 'bg-blue-100',   text: 'text-blue-800',   border: 'border-blue-300'   },
+  SOME:    { label: 'Some Leverage',    color: '#d97706', bg: 'bg-amber-100',  text: 'text-amber-800',  border: 'border-amber-300'  },
+  LIMITED: { label: 'Limited Leverage', color: '#64748b', bg: 'bg-slate-100',  text: 'text-slate-700',  border: 'border-slate-300'  },
 };
 
-const POSITION_STYLES = {
-  STRONG:    { bg: 'bg-green-100',  text: 'text-green-800',  border: 'border-green-300'  },
-  MODERATE:  { bg: 'bg-blue-100',   text: 'text-blue-800',   border: 'border-blue-300'   },
-  WEAK:      { bg: 'bg-amber-100',  text: 'text-amber-800',  border: 'border-amber-300'  },
-  UNCERTAIN: { bg: 'bg-slate-100',  text: 'text-slate-700',  border: 'border-slate-300'  },
-};
+function getLeverageTier(score) {
+  if (score >= 70) return { key: 'STRONG',  ...LEVERAGE_TIERS.STRONG  };
+  if (score >= 45) return { key: 'GOOD',    ...LEVERAGE_TIERS.GOOD    };
+  if (score >= 25) return { key: 'SOME',    ...LEVERAGE_TIERS.SOME    };
+  return                  { key: 'LIMITED', ...LEVERAGE_TIERS.LIMITED };
+}
 
 const URGENCY_STYLES = {
   HIGH:   { bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200'    },
@@ -100,7 +99,7 @@ function NextButton({ label, onClick }) {
 // ─── HubView ──────────────────────────────────────────────────────────────────
 
 function HubView({
-  grade, score, gradeColor, position, posStyle,
+  leverageTier,
   onNavigate, onLetterClick,
   downloadPdf, pdfLoading, pdfError, retryPdf, pdfProgress,
 }) {
@@ -109,7 +108,7 @@ function HubView({
       key: 'status',
       num: '1',
       title: 'Your Case Status',
-      subtitle: 'See your grade, legal position, and what gives you leverage.',
+      subtitle: 'See your case strength, key findings, and what gives you leverage.',
       numBg: '#2563eb',
       borderColor: '#93c5fd',
       borderHover: '#3b82f6',
@@ -139,21 +138,10 @@ function HubView({
       {/* Header */}
       <div className="mb-8 text-center">
         <p className="text-xs text-slate-400 uppercase tracking-widest mb-4 font-medium">Your DepositBack Report</p>
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <div
-            className="flex-shrink-0 w-16 h-16 rounded-full flex flex-col items-center justify-center text-white font-bold shadow"
-            style={{ backgroundColor: gradeColor }}
-          >
-            <span className="text-2xl leading-none">{grade}</span>
-            <span className="text-xs opacity-80">{score}/100</span>
-          </div>
-          <div className="text-left">
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Case Strength</p>
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${posStyle.bg} ${posStyle.text} ${posStyle.border}`}
-            >
-              {position}
-            </span>
+        <div className="flex items-center justify-center mb-4">
+          <div className={`inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-base font-bold border ${leverageTier.bg} ${leverageTier.text} ${leverageTier.border}`}>
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: leverageTier.color }} />
+            {leverageTier.label}
           </div>
         </div>
         <p className="text-sm text-slate-500">Click a section below to explore your full report.</p>
@@ -250,7 +238,7 @@ function HubView({
 
 // ─── StatusView ───────────────────────────────────────────────────────────────
 
-function StatusView({ report, cs, grade, score, gradeColor, position, winProb, posStyle, onNavigate, onBack }) {
+function StatusView({ report, cs, leverageTier, onNavigate, onBack }) {
   const [showAllLeverage, setShowAllLeverage]     = useState(false);
   const [showStatutoryRefs, setShowStatutoryRefs] = useState(false);
 
@@ -264,30 +252,36 @@ function StatusView({ report, cs, grade, score, gradeColor, position, winProb, p
       <h2 className="text-2xl font-bold text-slate-900 mb-1">Your Case Status</h2>
       <p className="text-sm text-slate-500 mb-6">How your case stacks up under Texas law.</p>
 
-      {/* Grade card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-4 flex items-center gap-5">
-        <div
-          className="flex-shrink-0 w-20 h-20 rounded-full flex flex-col items-center justify-center text-white font-bold shadow"
-          style={{ backgroundColor: gradeColor }}
-        >
-          <span className="text-3xl leading-none">{grade}</span>
-          <span className="text-xs opacity-80 mt-0.5">{score}/100</span>
+      {/* Leverage tier card */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-4">
+        <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Case Strength Assessment</p>
+        <div className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-base font-bold border ${leverageTier.bg} ${leverageTier.text} ${leverageTier.border}`}>
+          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: leverageTier.color }} />
+          {leverageTier.label}
         </div>
-        <div className="space-y-2.5">
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Legal Position</p>
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${posStyle.bg} ${posStyle.text} ${posStyle.border}`}
-            >
-              {position}
-            </span>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide">Estimated Likelihood of Recovery</p>
-            <p className="text-xl font-bold text-slate-900">{winProb}%</p>
-          </div>
-        </div>
+        <p className="text-xs text-slate-400 mt-3">
+          Based on the documented facts you provided. This is an informational assessment, not a legal determination.
+        </p>
       </div>
+
+      {/* Limited leverage cautionary note */}
+      {leverageTier.key === 'LIMITED' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">A Note on Your Case</p>
+          <p className="text-sm text-amber-900 leading-relaxed">
+            Based on the facts you provided, the documented support for your claim is limited. This may be because
+            the 30-day return deadline has not yet expired, your landlord provided itemization of deductions,
+            your forwarding address wasn't documented, or some key facts weren't captured in your intake.
+          </p>
+          <p className="text-sm text-amber-900 leading-relaxed mt-2">
+            We want to be straightforward: the factors our analysis looks for aren't strongly present here.
+            That said, landlords often respond to a formal written demand even in weaker cases — the prospect
+            of any legal involvement can prompt action. If you're willing to treat this report as a calculated
+            risk, you may still recover some or all of your deposit. We recommend reviewing your specific
+            findings below carefully and consulting a licensed Texas attorney before taking further steps.
+          </p>
+        </div>
+      )}
 
       {/* Recovery estimate */}
       {report.recovery_estimate?.likely_case && (
@@ -335,8 +329,8 @@ function StatusView({ report, cs, grade, score, gradeColor, position, winProb, p
       {/* Bad faith indicators */}
       {cs.bad_faith_indicators?.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
-          <p className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-2">Signs of Bad Faith</p>
-          <ul className="space-y-1.5">
+          <p className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-2">Factors That May Relate to a Bad Faith Claim</p>
+          <ul className="space-y-1.5 mb-3">
             {cs.bad_faith_indicators.map((indicator, i) => (
               <li key={i} className="text-sm text-red-700 flex items-start gap-1.5">
                 <span className="flex-shrink-0 mt-0.5">⚠</span>
@@ -344,6 +338,12 @@ function StatusView({ report, cs, grade, score, gradeColor, position, winProb, p
               </li>
             ))}
           </ul>
+          <p className="text-xs text-red-700 leading-relaxed border-t border-red-200 pt-3">
+            A bad faith determination under Tex. Prop. Code § 92.109 — which can trigger penalties up to
+            3× your deposit amount — requires legal judgment that goes beyond this report. If you believe
+            these factors apply to your situation, we recommend consulting a licensed Texas attorney.
+            See the attorney referral resources in the "If They Still Won't Pay" section.
+          </p>
         </div>
       )}
 
@@ -1028,16 +1028,12 @@ function ReportPage() {
 
   // ─── Derived values ────────────────────────────────────────────────────────
 
-  const cs         = report.case_strength || {};
-  const grade      = cs.leverage_grade || '?';
-  const score      = cs.leverage_score ?? cs.case_strength_score ?? 0;
-  const winProb    = cs.win_probability || 0;
-  const position   = cs.strategic_position || 'UNCERTAIN';
-  const gradeColor = GRADE_COLORS[grade] || '#64748b';
-  const posStyle   = POSITION_STYLES[position] || POSITION_STYLES.UNCERTAIN;
-  const urgStyle   = URGENCY_STYLES[report.strategy?.urgency] || URGENCY_STYLES.LOW;
+  const cs           = report.case_strength || {};
+  const score        = cs.leverage_score ?? cs.case_strength_score ?? 0;
+  const leverageTier = getLeverageTier(score);
+  const urgStyle     = URGENCY_STYLES[report.strategy?.urgency] || URGENCY_STYLES.LOW;
 
-  const sharedProps = { report, cs, grade, score, gradeColor, position, winProb, posStyle, urgStyle };
+  const sharedProps = { report, cs, score, leverageTier, urgStyle };
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
