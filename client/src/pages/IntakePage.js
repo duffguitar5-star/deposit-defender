@@ -132,15 +132,33 @@ function IntakePage() {
     }
   };
 
+  const isValidLeaseFile = (file) => {
+    const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    return allowed.includes(file.type) || ['pdf', 'png', 'jpg', 'jpeg'].includes(ext);
+  };
+
   const handleFileDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file) handleLeaseFile(file);
+    if (!file) return;
+    if (!isValidLeaseFile(file)) {
+      setUploadState('error');
+      setUploadMessage('Please upload a PDF or image file (PNG, JPG).');
+      return;
+    }
+    handleLeaseFile(file);
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) handleLeaseFile(file);
+    if (!file) return;
+    if (!isValidLeaseFile(file)) {
+      setUploadState('error');
+      setUploadMessage('Please upload a PDF or image file (PNG, JPG).');
+      return;
+    }
+    handleLeaseFile(file);
   };
 
   const skipUpload = () => {
@@ -230,7 +248,7 @@ function IntakePage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="application/pdf,image/png,image/jpeg,image/jpg,.pdf,.png,.jpg,.jpeg"
+                    accept="*/*"
                     className="hidden"
                     onChange={handleFileChange}
                   />
