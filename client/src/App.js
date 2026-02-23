@@ -8,6 +8,7 @@ import PaymentCancelPage from './pages/PaymentCancelPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
 import AccessReportPage from './pages/AccessReportPage';
+import DisclaimersPage from './pages/DisclaimersPage';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/access-report" element={<AccessReportPage />} />
+        <Route path="/disclaimers" element={<DisclaimersPage />} />
       </Routes>
     </Router>
   );

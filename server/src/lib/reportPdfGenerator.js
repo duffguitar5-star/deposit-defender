@@ -25,20 +25,19 @@ const COLORS = {
   white: '#ffffff',
 };
 
-const GRADE_COLORS = {
-  A: '#16a34a',
-  B: '#2563eb',
-  C: '#d97706',
-  D: '#ea580c',
-  F: '#dc2626',
+const LEVERAGE_TIER_COLORS = {
+  STRONG:  '#16a34a',
+  GOOD:    '#2563eb',
+  SOME:    '#d97706',
+  LIMITED: '#64748b',
 };
 
-const POSITION_COLORS = {
-  STRONG: '#16a34a',
-  MODERATE: '#2563eb',
-  WEAK: '#d97706',
-  UNCERTAIN: '#64748b',
-};
+function getLeverageTierLabel(score) {
+  if (score >= 70) return { key: 'STRONG',  label: 'Strong Leverage'  };
+  if (score >= 45) return { key: 'GOOD',    label: 'Good Leverage'    };
+  if (score >= 25) return { key: 'SOME',    label: 'Some Leverage'    };
+  return                  { key: 'LIMITED', label: 'Limited Leverage' };
+}
 
 // ─────────────────────────────────────────────
 // Main generator
@@ -271,42 +270,43 @@ function drawCaseStrengthPanel(doc, cs, recovery, strategy) {
     .lineWidth(1)
     .stroke();
 
-  // Grade badge (left col)
-  const grade = cs.leverage_grade || '?';
-  const gradeColor = GRADE_COLORS[grade] || COLORS.muted;
+  // Leverage tier badge (left col)
+  const score = cs.leverage_score ?? cs.case_strength_score ?? 0;
+  const tier = getLeverageTierLabel(score);
+  const tierColor = LEVERAGE_TIER_COLORS[tier.key] || COLORS.muted;
   const badgeX = doc.page.margins.left + 16;
   const badgeY = panelY + 12;
 
-  doc.rect(badgeX, badgeY, 52, 52)
-    .fillColor(gradeColor)
+  // Tier label pill
+  doc.roundedRect(badgeX, badgeY, 90, 28, 6)
+    .fillColor(tierColor)
     .fill();
 
   doc.fillColor(COLORS.white)
     .font('Helvetica-Bold')
-    .fontSize(30)
-    .text(grade, badgeX, badgeY + 10, { width: 52, align: 'center', lineBreak: false });
+    .fontSize(9)
+    .text(tier.label, badgeX, badgeY + 9, { width: 90, align: 'center', lineBreak: false });
 
-  // Score under grade
+  // Score under tier label
   doc.fillColor(COLORS.muted)
     .font('Helvetica')
     .fontSize(8)
-    .text(`${cs.leverage_score || 0}/100`, badgeX, badgeY + 46, { width: 52, align: 'center', lineBreak: false });
+    .text(`${score}/100`, badgeX, badgeY + 42, { width: 90, align: 'center', lineBreak: false });
 
   // Metrics (right of badge)
-  const metricsX = badgeX + 70;
+  const metricsX = badgeX + 106;
   const col2X = doc.page.margins.left + pageWidth / 2;
   let metricY = panelY + 14;
 
-  // Position label
-  const posColor = POSITION_COLORS[cs.strategic_position] || COLORS.muted;
-  doc.fillColor(posColor)
+  // Tier label repeated as text header
+  doc.fillColor(tierColor)
     .font('Helvetica-Bold')
     .fontSize(11)
-    .text(cs.strategic_position || 'UNKNOWN', metricsX, metricY);
+    .text(tier.label, metricsX, metricY);
 
   metricY += 16;
 
-  metricRow(doc, metricsX, metricY, 'Win Probability:', `${cs.win_probability || 0}%`);
+  metricRow(doc, metricsX, metricY, 'Case Score:', `${score}/100`);
   metricRow(doc, col2X, metricY, 'Likely Recovery:', recovery.likely_case || 'N/A');
   metricY += 14;
   metricRow(doc, metricsX, metricY, 'Best Case:', recovery.best_case || 'N/A');

@@ -7,13 +7,19 @@ const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 const fmt = v => v || 'Not provided';
 
-const GRADE_COLORS = {
-  A: '#16a34a',
-  B: '#2563eb',
-  C: '#d97706',
-  D: '#ea580c',
-  F: '#dc2626',
+const LEVERAGE_TIERS = {
+  STRONG:  { label: 'Strong Leverage',  bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
+  GOOD:    { label: 'Good Leverage',    bg: 'bg-blue-100',  text: 'text-blue-800',  border: 'border-blue-300'  },
+  SOME:    { label: 'Some Leverage',    bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
+  LIMITED: { label: 'Limited Leverage', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' },
 };
+
+function getLeverageTier(score) {
+  if (score >= 70) return LEVERAGE_TIERS.STRONG;
+  if (score >= 45) return LEVERAGE_TIERS.GOOD;
+  if (score >= 25) return LEVERAGE_TIERS.SOME;
+  return LEVERAGE_TIERS.LIMITED;
+}
 
 const ACTION_SUMMARY = {
   SEND_DEMAND_LETTER:               'Send a certified demand letter to your landlord immediately.',
@@ -124,20 +130,18 @@ function ReviewPage() {
               <section className="max-w-2xl mx-auto mb-8">
                 <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 overflow-hidden">
                   {/* Header */}
-                  <div className="px-6 pt-6 pb-4 flex items-center gap-4">
-                    {/* Grade badge */}
-                    <div
-                      className="flex-shrink-0 w-16 h-16 rounded-full flex flex-col items-center justify-center text-white font-bold shadow-sm"
-                      style={{ backgroundColor: GRADE_COLORS[previewData.leverage_grade] || '#64748b' }}
-                    >
-                      <span className="text-2xl leading-none">{previewData.leverage_grade || '?'}</span>
-                      <span className="text-xs opacity-80 leading-tight">{previewData.leverage_score}/100</span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-blue-600 uppercase tracking-wider font-semibold mb-0.5">Your Case Score</p>
-                      <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                        Grade {previewData.leverage_grade} — {previewData.win_probability}% win probability
-                      </p>
+                  <div className="px-6 pt-6 pb-4">
+                    <p className="text-xs text-blue-600 uppercase tracking-wider font-semibold mb-2">Your Case Score</p>
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const tier = getLeverageTier(previewData.leverage_score || 0);
+                        return (
+                          <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold border ${tier.bg} ${tier.text} ${tier.border}`}>
+                            {tier.label}
+                          </span>
+                        );
+                      })()}
+                      <span className="text-sm text-slate-500">{previewData.leverage_score || 0}/100</span>
                     </div>
                   </div>
 

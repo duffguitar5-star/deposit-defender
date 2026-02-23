@@ -26,6 +26,16 @@ function AppLayout({ children }) {
       </header>
 
       {children}
+
+      <div className="border-t border-slate-100 py-4 mt-4">
+        <div className="container text-center">
+          <a href="/disclaimers" className="text-xs text-slate-400 hover:text-slate-600 underline">
+            Disclaimers
+          </a>
+          <span className="text-xs text-slate-300 mx-2">·</span>
+          <span className="text-xs text-slate-400">Not legal advice. Not a law firm.</span>
+        </div>
+      </div>
     </div>
   );
 }
