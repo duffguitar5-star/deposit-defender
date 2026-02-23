@@ -39,6 +39,17 @@ function Home() {
           </div>
         </section>
 
+        {/* Social proof — why a letter works */}
+        <section className="mb-10 max-w-2xl mx-auto px-4 text-center">
+          <p className="text-slate-700 text-base font-semibold leading-snug mb-1">
+            Most deposit disputes resolve with a single letter.
+          </p>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            When landlords realize a tenant knows Texas law, the calculus changes:
+            pay now or risk 3× penalties in court.
+          </p>
+        </section>
+
         {/* Validation Strip — 3 punchy factual hits */}
         <section className="mt-4 mb-20">
           <div className="grid gap-0 md:grid-cols-3 border border-slate-200 rounded-2xl overflow-hidden">

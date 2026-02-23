@@ -35,9 +35,10 @@ function HeroBanner() {
           </p>
           <button
             onClick={() => navigate('/intake')}
-            className="mt-8 bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-8 py-4 text-lg font-bold inline-flex items-center justify-center tracking-tight"
+            className="mt-8 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl px-10 py-5 text-xl font-bold flex flex-col items-center justify-center tracking-tight"
           >
-            Get It Back
+            <span>Get It Back</span>
+            <span className="text-sm font-semibold opacity-85 mt-0.5">Click Here to Start →</span>
           </button>
         </div>
       </div>
