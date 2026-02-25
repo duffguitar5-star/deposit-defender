@@ -1,0 +1,14 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-t'
+      - 'us-central1-docker.pkg.dev/deposit-defender-testing/dd-pipeline/harness:latest'
+      - '-f'
+      - 'gcp-pipeline/harness/Dockerfile'
+      - '.'
+images:
+  - 'us-central1-docker.pkg.dev/deposit-defender-testing/dd-pipeline/harness:latest'
+timeout: '900s'
+options:
+  machineType: 'E2_HIGHCPU_8'
