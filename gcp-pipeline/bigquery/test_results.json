@@ -1,0 +1,133 @@
+[
+  {
+    "name": "result_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "UUID for this result row"
+  },
+  {
+    "name": "scenario_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "FK to test_scenarios.scenario_id"
+  },
+  {
+    "name": "lease_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "FK to leases.lease_id — denormalized for easy querying"
+  },
+  {
+    "name": "test_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "FK to test_runs.test_run_id"
+  },
+  {
+    "name": "scenario_name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Denormalized from test_scenarios for easy filtering"
+  },
+  {
+    "name": "case_strength_score",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "0–100 score from calculateLeverageScore. NULL indicates analysis threw."
+  },
+  {
+    "name": "leverage_grade",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "A | B | C | D | F from getLeverageGrade"
+  },
+  {
+    "name": "strategic_position",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "STRONG | MODERATE | WEAK | UNCERTAIN from getStrategicPosition"
+  },
+  {
+    "name": "win_probability",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "5–95% estimated win probability from estimateWinProbability"
+  },
+  {
+    "name": "recommended_action",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "SEND_DEMAND_LETTER | REQUEST_ITEMIZATION_OR_NEGOTIATE | GATHER_EVIDENCE_THEN_EVALUATE | REVIEW_SITUATION"
+  },
+  {
+    "name": "detected_issue_ids",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "Array of issue_ids that fired (e.g. ['deadline_missed_full_deposit', 'normal_wear_concern'])"
+  },
+  {
+    "name": "expected_detector",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The issue_id expected to fire for this scenario"
+  },
+  {
+    "name": "expected_position",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Expected strategic_position for correctness validation"
+  },
+  {
+    "name": "detector_fired_correctly",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "True if the expected detector actually fired. NULL if no detector was expected."
+  },
+  {
+    "name": "position_correct",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "True if actual strategic_position matches expected_position"
+  },
+  {
+    "name": "report_valid",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "Result of validateReport() — checks required fields are present"
+  },
+  {
+    "name": "validation_errors",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "List of validation error strings if report_valid = FALSE"
+  },
+  {
+    "name": "error_thrown",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Exception message if buildCaseAnalysisReport threw. Empty string = no error."
+  },
+  {
+    "name": "recovery_likely_case",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Likely-case recovery estimate as formatted dollar string (e.g. '$960')"
+  },
+  {
+    "name": "recovery_best_case",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Best-case recovery estimate"
+  },
+  {
+    "name": "report_json",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Full JSON-serialized report. Stored only for anomalous results (errors, validation failures, detector misfires) to limit storage cost."
+  },
+  {
+    "name": "processed_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "name": "dd-reporter",
+  "version": "1.0.0",
+  "description": "DepositDefender — Phase 3 Reporter Job",
+  "main": "reporter.js",
+  "scripts": {
+    "start": "node reporter.js"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^7.3.0",
+    "@google-cloud/storage": "^7.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

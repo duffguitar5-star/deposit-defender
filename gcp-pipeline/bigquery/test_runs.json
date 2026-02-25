@@ -1,0 +1,56 @@
+[
+  {
+    "name": "test_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "UUID for this harness invocation"
+  },
+  {
+    "name": "started_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "completed_at",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "leases_processed",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "scenarios_generated",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "results_logged",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "analysis_failures",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Count of scenarios where buildCaseAnalysisReport threw an exception"
+  },
+  {
+    "name": "detector_misfires",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Count of scenarios where expected detector did not fire"
+  },
+  {
+    "name": "position_mismatches",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "summary_report_gcs_url",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "gs:// URI of the Markdown summary written by the reporter job"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "name": "dd-scraper",
+  "version": "1.0.0",
+  "description": "DepositDefender GCP scraping job — discovers and classifies Texas lease PDFs",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^7.9.0",
+    "@google-cloud/storage": "^7.9.0",
+    "@google-cloud/vertexai": "^1.9.0",
+    "axios": "^1.7.0",
+    "pdf-parse": "^2.4.5",
+    "robots-parser": "^3.0.1",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

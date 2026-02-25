@@ -1,0 +1,61 @@
+[
+  {
+    "name": "scenario_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "UUID for this specific scenario instance"
+  },
+  {
+    "name": "lease_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "FK to leases.lease_id"
+  },
+  {
+    "name": "test_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "UUID shared by all scenarios in one harness invocation"
+  },
+  {
+    "name": "scenario_index",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "0-based index of the scenario template (0–6)"
+  },
+  {
+    "name": "scenario_name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Human-readable scenario name, e.g. deadline_missed_full_withhold"
+  },
+  {
+    "name": "expected_detector",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "issue_id that should fire for this scenario. Null means no issues expected."
+  },
+  {
+    "name": "expected_position",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Expected strategic_position: STRONG | MODERATE | WEAK | UNCERTAIN"
+  },
+  {
+    "name": "intake_json",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Full JSON-serialized intake object passed to buildCaseAnalysisReport"
+  },
+  {
+    "name": "lease_details_json",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "JSON-serialized Gemini-extracted lease details (deposit amount, address, etc.)"
+  },
+  {
+    "name": "generated_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  }
+]

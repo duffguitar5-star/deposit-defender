@@ -1,0 +1,17 @@
+{
+  "name": "dd-harness",
+  "version": "1.0.0",
+  "description": "DepositDefender GCP test harness — calls buildCaseAnalysisReport directly against scraped leases",
+  "main": "harness.js",
+  "scripts": {
+    "start": "node harness.js"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^7.9.0",
+    "@google-cloud/vertexai": "^1.9.0",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "lease_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "SHA-256 hash of raw PDF bytes — primary deduplication key"
+  },
+  {
+    "name": "source_url",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Original URL the PDF was downloaded from"
+  },
+  {
+    "name": "source_domain",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Hostname extracted from source_url"
+  },
+  {
+    "name": "file_size_bytes",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Size of the raw PDF in bytes"
+  },
+  {
+    "name": "extracted_text",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Full text extracted from the PDF (up to 10 pages). Null for non-TX or unclassifiable leases."
+  },
+  {
+    "name": "text_length",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Character count of extracted_text"
+  },
+  {
+    "name": "gemini_classification",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Raw Gemini classification result: RESIDENTIAL_TX, NOT_RESIDENTIAL_TX, RESIDENTIAL_NOT_TX, NOT_RESIDENTIAL_NOT_TX, SKIPPED_NO_TEXT, ERROR"
+  },
+  {
+    "name": "gemini_confidence",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Gemini-reported confidence score 0.0–1.0"
+  },
+  {
+    "name": "gemini_reason",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "One-sentence explanation from Gemini classification"
+  },
+  {
+    "name": "is_valid_tx_lease",
+    "type": "BOOLEAN",
+    "mode": "REQUIRED",
+    "description": "True if Gemini confirmed this is a Texas residential lease. Only these rows are passed to the harness."
+  },
+  {
+    "name": "gcs_path",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "gs:// URI of the stored PDF. Only set for is_valid_tx_lease = TRUE."
+  },
+  {
+    "name": "scraped_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "UTC timestamp when this row was inserted"
+  }
+]
